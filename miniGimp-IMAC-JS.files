@@ -1,0 +1,14 @@
+include/Calque.h
+include/dliste.h
+include/Imagimp.h
+include/interface.h
+include/outils.h
+include/pile.h
+include/PPM.h
+src/glimagimp/interface.c
+src/glimagimp/outils.c
+src/imagimp/Calque.c
+src/imagimp/Imagimp.c
+src/imagimp/main.c
+src/imagimp/PPM.c
+Makefile

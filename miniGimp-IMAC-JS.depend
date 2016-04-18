@@ -1,0 +1,70 @@
+# depslib dependency file v1.0
+1460994051 source:c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\src\glimagimp\interface.c
+	"outils.h"
+	"interface.h"
+	<string.h>
+
+1460496301 c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\include\outils.h
+	<stdio.h>
+	<stdlib.h>
+	<GL/glut.h>
+
+1460990803 c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\include\interface.h
+	<stdio.h>
+	<GL/glut.h>
+	<math.h>
+	<GL/glu.h>
+	<GL/gl.h>
+	<GL/glext.h>
+
+1460995329 source:c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\src\glimagimp\outils.c
+	"interface.h"
+	"outils.h"
+	<stdio.h>
+	<windows.h>
+	<math.h>
+
+1460913269 source:c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\src\imagimp\calque.c
+	<string.h>
+	"Calque.h"
+
+1460917012 c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\include\calque.h
+	<stddef.h>
+	<stdint.h>
+	"dliste.h"
+	"pile.h"
+
+1460913048 c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\include\dliste.h
+	<stdlib.h>
+	<stdbool.h>
+
+1460496301 c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\include\pile.h
+	<stdlib.h>
+	<assert.h>
+
+1460994603 source:c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\src\imagimp\imagimp.c
+	<stdio.h>
+	<string.h>
+	<GL/glut.h>
+	"interface.h"
+	"Imagimp.h"
+
+1460993792 c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\include\imagimp.h
+	"interface.h"
+
+1460992803 source:c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\src\imagimp\main.c
+	<string.h>
+	<stdio.h>
+	"outils.h"
+	"interface.h"
+	"Imagimp.h"
+
+1460496301 source:c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\src\imagimp\ppm.c
+	<stdio.h>
+	<stdlib.h>
+	<ctype.h>
+	"PPM.h"
+
+1460496301 c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\include\ppm.h
+	<stdbool.h>
+
