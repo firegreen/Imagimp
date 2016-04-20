@@ -1,5 +1,6 @@
-#include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include <GL/glut.h>
 #include "interface.h"
 #include "Imagimp.h"
@@ -18,10 +19,36 @@ void quit(){
     exit(0);
 }
 
-void answerOK() { Dialog.userAnswer = BTN_OK; desactiveDialog(); }
-void answerYES() { Dialog.userAnswer = BTN_YES; desactiveDialog();}
-void answerNO() { Dialog.userAnswer = BTN_NO; desactiveDialog();}
-void answerCANCEL() { Dialog.userAnswer = BTN_CANCEL; desactiveDialog();}
+void setOpacityToCurrentLayer(float opacity){
+    Imagimp.picture.current->opacity = opacity;
+    updateCfLayer(&Imagimp.picture);
+    actualiseImage(Imagimp.picture.Cf.rgb);
+    glutPostRedisplay();
+}
+
+float initial_opacity;
+
+void handleOpacityDialog(DIALOGBTNS answer){
+    switch (answer) {
+    case BTN_CANCEL:
+        setOpacityToCurrentLayer(initial_opacity);
+        break;
+    default:
+        break;
+    }
+}
+
+void openOpacityDialog(){
+    initial_opacity = Imagimp.picture.current->opacity;
+    Dialog.slider.setHandle = setOpacityToCurrentLayer;
+    setSliderValue(&Dialog.slider,Imagimp.picture.current->opacity);
+    activeDialog("Opacity",FLAGS_SLIDER | FLAGS_CANCEL | FLAGS_OK, handleOpacityDialog);
+}
+
+void answerOK() { if(Dialog.closeHandle != NULL) (*Dialog.closeHandle)(BTN_OK); desactiveDialog(); }
+void answerYES() { if(Dialog.closeHandle != NULL) (*Dialog.closeHandle)(BTN_YES); desactiveDialog();}
+void answerNO() { if(Dialog.closeHandle != NULL) (*Dialog.closeHandle)(BTN_NO); desactiveDialog();}
+void answerCANCEL() { if(Dialog.closeHandle != NULL) (*Dialog.closeHandle)(BTN_CANCEL); desactiveDialog();}
 
 void Imagimp_launch(int argc, char *argv[]) {
     const unsigned w=800, h=600, ihm_w=200;
@@ -34,12 +61,15 @@ void Imagimp_launch(int argc, char *argv[]) {
         }
     }
     Imagimp.image_base = malloc(size*sizeof(unsigned char));
-    memset( Imagimp.image_base, 0x8e, size);
+    memset( Imagimp.image_base, 0xee, size);
+    makeEmptyPicture(&Imagimp.picture, w,h);
+    addNewLayer(&Imagimp.picture,Imagimp.image_base);
+    updateCfLayer(&Imagimp.picture);
     Imagimp.hoveredButton = NULL;
     Imagimp.pressedButton = NULL;
     Imagimp.mouseButtonPressed=0;
     Imagimp.dialogMode = 0;
-    initGLIMAGIMP_IHM(w, h, Imagimp.image_base, w+ihm_w, h,0);
+    initGLIMAGIMP_IHM(w, h, Imagimp.picture.Cf.rgb, w+ihm_w, h,0);
     fixeFonctionClicSouris(Imagimp_handleMouseClick);
     fixeFonctionMotionSouris(Imagimp_handleMouseMotion);
     fixeFonctionClavier(Imagimp_handleKeyboard);
@@ -55,6 +85,8 @@ void Imagimp_launch(int argc, char *argv[]) {
                                            IMAGIMPFORE,IMAGIMPBACK,quit);
     Imagimp.buttons[BTN_LOAD] = makeButton("Charger",makeBounds(0.8f,0.8f,0.15f,0.04f),
                                            IMAGIMPFORE,IMAGIMPBACK,quit);
+    Imagimp.buttons[BTN_OPACITY] = makeButton("Opacite",makeBounds(0.8f,0.75f,0.15f,0.04f),
+                                           IMAGIMPFORE,IMAGIMPBACK,openOpacityDialog);
 
     Dialog.text = NULL;
     Dialog.buttons[BTN_YES] = makeButton("Oui",makeBounds(0.8f,0.15f,0.15f,0.04f),
@@ -65,6 +97,7 @@ void Imagimp_launch(int argc, char *argv[]) {
                                         DIALOGFORE,DIALOGBACK,answerOK);
     Dialog.buttons[BTN_CANCEL] = makeButton("Annuler",makeBounds(0.8f,0.15f,0.15f,0.04f),
                                             DIALOGFORE,DIALOGBACK,answerCANCEL);
+    Dialog.slider = makeSlider("Contrast",makeBounds(0.3,0.45,0.4,0.1),DIALOGFORE,DIALOGBACK,NULL);
     Dialog.bounds = makeBounds(0.25,0.35,0.5,0.35);
     Dialog.input = makeString();
     Dialog.promptBounds = makeBounds(0.3,0.45,0.4,0.1);
@@ -143,7 +176,7 @@ void Imagimp_handleKeyboard(unsigned char ascii, int x, int y) {
     case 'f':
         setFullsreen(!isFullscreen());
         break;
-    case 27: // Touche Escape
+    case ESCAPE_KEY: // Touche Escape
         quit();
         break;
     default :
@@ -155,7 +188,7 @@ void Imagimp_handleKeyboardSpecial(int touche, int x, int y) {
     printf("Touche spéciale : %d (souris: %d, %d)\n", touche, x, y);
     switch(touche) {
     case GLUT_KEY_F1:
-        activeDialog("Coucou toi",FLAGS_OK | FLAGS_PROMPT);
+        activeDialog("Coucou toi",FLAGS_OK | FLAGS_PROMPT, NULL);
         break;
     case GLUT_KEY_F2: break;
     case GLUT_KEY_F3: break;
@@ -184,11 +217,31 @@ void Imagimp_handleMouseClick(int button, int state, int x, int y) {
     float xGL = (float)x/(float)screenWidth();
     float yGL = 1.-(float)y/(float)screenHeight();
     Button* b;
-    if(Imagimp.dialogMode)
+    int redisplay = 0;
+    if(Imagimp.dialogMode){
         b = findButtonInArray(xGL,yGL,Dialog.buttons,DIALOG_NBBUTTONS);
+        if(!Dialog.slider.invisible){
+            unsigned char sliderHover = isInBounds(xGL,yGL,&Dialog.slider.cursorBounds);
+            if(sliderHover){
+                if (state == GLUT_DOWN) {
+                    pressSlider(&Dialog.slider);
+                    redisplay = 1;
+                }
+                else{
+                    releaseSlider(&Dialog.slider,1);
+                    redisplay = 1;
+                }
+            }
+            else{
+                if (state != GLUT_DOWN) {
+                    releaseSlider(&Dialog.slider,1);
+                    redisplay = 1;
+                }
+            }
+        }
+    }
     else
         b = findButtonInArray(xGL,yGL,Imagimp.buttons,MAIN_NBBUTTONS);
-    int redisplay = 0;
     if (button == GLUT_LEFT_BUTTON) {
         printf("Button gauche ");
     }
@@ -225,11 +278,36 @@ void Imagimp_handleMouseMotion(int x, int y) {
     float xGL = (float)x/(float)screenWidth();
     float yGL = 1.-(float)y/(float)screenHeight();
     Button* b;
-    if(Imagimp.dialogMode)
-        b = findButtonInArray(xGL,yGL,Dialog.buttons,DIALOG_NBBUTTONS);
-    else
-        b = findButtonInArray(xGL,yGL,Imagimp.buttons,MAIN_NBBUTTONS);
     int redisplay = 0;
+
+    if(Imagimp.dialogMode){
+        b = findButtonInArray(xGL,yGL,Dialog.buttons,DIALOG_NBBUTTONS);
+        if(!Dialog.slider.invisible){
+            unsigned char sliderHover = isInBounds(xGL,yGL,&Dialog.slider.cursorBounds);
+            if(sliderHover){
+                if(!Dialog.slider.hover)
+                {
+                    hoverSlider(&Dialog.slider);
+                    redisplay = 1;
+                }
+            }
+            else{
+                if(Dialog.slider.hover)
+                {
+                    leaveSlider(&Dialog.slider);
+                    redisplay = 1;
+                }
+            }
+            if(Dialog.slider.press)
+            {
+                setSliderValueFromPos(&Dialog.slider,xGL);
+                redisplay = 1;
+            }
+        }
+    }
+    else{
+        b = findButtonInArray(xGL,yGL,Imagimp.buttons,MAIN_NBBUTTONS);
+    }
 
     if(Imagimp.hoveredButton!=b && Imagimp.hoveredButton!=NULL){
         leaveButton(Imagimp.hoveredButton);
@@ -242,7 +320,6 @@ void Imagimp_handleMouseMotion(int x, int y) {
         redisplay = 1;
     }
     if(redisplay) glutPostRedisplay();
-    printf("Coordonnees du point motion %f %f\n",xGL,yGL);
 }
 
 void Dialog_draw(){
@@ -276,15 +353,18 @@ void Dialog_draw(){
             x+=glutBitmapWidth(GLUT_BITMAP_8_BY_13,current->c)/(float)screenWidth();
         }
     }
+    else if(!Dialog.slider.invisible){
+        drawSlider(&Dialog.slider);
+    }
 }
 
-void activeDialog(const char *text, int flag){
+void activeDialog(const char *text, int flag, void (*closeHandle)(DIALOGBTNS)){
     if(Dialog.text != NULL) free(Dialog.text);
     if(Dialog.input.size) freeString(Dialog.input);
     Dialog.text = NULL;
     Imagimp.dialogMode = 1;
     if(text[0]){
-        Dialog.text = malloc(sizeof(char)*strlen(text));
+        Dialog.text = malloc(sizeof(char)*strlen(text)+1);
         strcpy(Dialog.text,text);
     }
     Dialog.buttons[BTN_OK].invisible = !(flag & FLAGS_OK);
@@ -292,12 +372,14 @@ void activeDialog(const char *text, int flag){
     Dialog.buttons[BTN_NO].invisible = !(flag & FLAGS_NO);
     Dialog.buttons[BTN_CANCEL].invisible = !(flag & FLAGS_CANCEL);
     Dialog.prompt = flag & FLAGS_PROMPT;
+    Dialog.slider.invisible = !(flag & FLAGS_SLIDER);
+    Dialog.closeHandle = closeHandle;
     glutPostRedisplay();
 }
 
 void desactiveDialog(){
     Imagimp.dialogMode = 0;
-    Dialog.userAnswer = -1;
+    Dialog.closeHandle = NULL;
     Dialog.prompt = 0;
     glutPostRedisplay();
 }

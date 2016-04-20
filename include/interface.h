@@ -167,6 +167,32 @@ void leaveButton(Button* b);
 void setButtonInvisible(Button* b, int invisible);
 void setButtonInactiv(Button* b, int inactiv);
 
+typedef struct Slider {
+    char* label;
+    Bounds bounds;
+    Bounds cursorBounds;
+    Color fore;
+    Color back;
+    void (*setHandle)(float);
+    int hover;
+    int press;
+    int invisible;
+    int inactiv;
+    float value;
+} Slider;
+
+Slider makeSlider(char* label, Bounds bounds,Color fore, Color back,
+                  void (*setHandle)(float));
+void drawSlider(const Slider* b);
+void pressSlider(Slider* b);
+void releaseSlider(Slider* b, int activeAction);
+void hoverSlider(Slider* b);
+void leaveSlider(Slider* b);
+void setSliderValue(Slider *b, float value);
+void setSliderValueFromPos(Slider* b, float x);
+void setSliderInvisible(Slider* b, int invisible);
+void setSliderInactiv(Slider* b, int inactiv);
+
 
 typedef struct ButtonsList{
     Button* button;

@@ -2,6 +2,7 @@
 #define IMAGIMP_H
 
 #include "interface.h"
+#include "layer.h"
 typedef struct StringChar{
     char c;
     struct StringChar* next;
@@ -20,9 +21,10 @@ void removeLastCharacter(String *s);
 char* convertString(String s);
 void freeString(String s);
 
-typedef enum { BTN_QUIT=0, BTN_SAVE, BTN_LOAD, MAIN_NBBUTTONS } MAINBTNS;
+typedef enum { BTN_QUIT=0, BTN_SAVE, BTN_LOAD, BTN_OPACITY, MAIN_NBBUTTONS } MAINBTNS;
 typedef enum { BTN_YES=0, BTN_NO, BTN_OK, BTN_CANCEL, DIALOG_NBBUTTONS} DIALOGBTNS;
-typedef enum { FLAGS_YES=1,FLAGS_NO=2,FLAGS_OK=4,FLAGS_CANCEL=8, FLAGS_PROMPT=16 } DIALOGFLAGS;
+typedef enum { FLAGS_YES=1,FLAGS_NO=2,FLAGS_OK=4,FLAGS_CANCEL=8, FLAGS_PROMPT=16, FLAGS_SLIDER=32} DIALOGFLAGS;
+
 struct {
     Button buttons[MAIN_NBBUTTONS];
     Button* pressedButton;
@@ -30,6 +32,7 @@ struct {
     unsigned char* image_base;
     unsigned char mouseButtonPressed;
     unsigned char dialogMode;
+    Picture picture;
 } Imagimp;
 
 struct {
@@ -37,11 +40,12 @@ struct {
     String input;
     unsigned char prompt;
     Button buttons[DIALOG_NBBUTTONS];
+    Slider slider;
     Bounds bounds;
     float xText, yText;
     float xBtn, yBtn;
     Bounds promptBounds;
-    DIALOGBTNS userAnswer;
+    void (*closeHandle)(DIALOGBTNS);
 } Dialog;
 
 //void Imagimp_init(int argc, char *argv[]);
@@ -53,7 +57,7 @@ void Imagimp_handleMouseClick(int button, int state, int x, int y);
 void Imagimp_handleMouseMotion(int x, int y);
 void Imagimp_draw();
 
-void activeDialog(const char* text, int flag);
+void activeDialog(const char* text, int flag, void (*closeHandle)(DIALOGBTNS));
 void desactiveDialog();
 void Dialog_draw();
 #endif /* IMAGIMP_H */
