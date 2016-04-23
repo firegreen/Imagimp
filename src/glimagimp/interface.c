@@ -56,14 +56,18 @@ void __check_gl(int line, const char *filename) {
 struct {
     unsigned int width;
     unsigned int height;
-    unsigned char *src;
+    float zoom;
+    Bounds bounds;
+    GLuint textureID;
 } currentImage;
 
 struct {
     unsigned int width;
     unsigned int height;
     unsigned char fullscreen;
-    Color background;
+    float UIstartX;
+    Color backgroundUI;
+    Color backgroundImage;
 } screen;
 
 /// Flag pour le dessin
@@ -79,27 +83,30 @@ struct {
 
 /// Fonction de callback fixé par l'utilisateur
 struct {
-    void (*click_souris)(int,int,int,int);
-    void (*motion_souris)(int,int);
-    void (*press_clavier)(unsigned char,int,int);
+    void (*click_souris)(int,int,float,float);
+    void (*motion_souris)(float,float,float,float,int);
+    void (*press_clavier)(unsigned char,int,int, char ,char);
     void (*press_spec_clavier)(int,int,int);
+    float oldX,oldY;
+    int pressedButton;
+    char ALT,CTRL;
 } control;
 
 
 /// ///////////////////////////////////////////////////////////////////////////
 /// Fonctions de definition des callbacks user
 /// ///////////////////////////////////////////////////////////////////////////
-void fixeFonctionClavier(void (*fct)(unsigned char,int,int)) {
+void fixeFonctionClavier(void (*fct)(unsigned char,int,int, char CTRL, char ALT)) {
     control.press_clavier = fct;
 }
 void fixeFonctionClavierSpecial(void (*fct)(int,int,int)) {
     control.press_spec_clavier = fct;
 }
-void fixeFonctionClicSouris(void (*fct)(int button,int state,int x,int y)) {
+void fixeFonctionClicSouris(void (*fct)(int, int, float, float)) {
     control.click_souris = fct;
 }
 
-void fixeFonctionMotionSouris(void (*fct)(int, int)){
+void fixeFonctionMotionSouris(void (*fct)(float x, float y, float deltaX, float deltaY, int drag)){
     control.motion_souris = fct;
 }
 
@@ -108,8 +115,14 @@ void fixeFonctionDessin(void (*fct)(void)) {
     glutPostRedisplay();
 }
 
-void actualiseImage(unsigned char* newImage) {
-    currentImage.src = newImage;
+void actualiseImage(unsigned char* newImage, unsigned int width, unsigned int height) {
+    currentImage.height = height;
+    currentImage.width = width;
+    currentImage.bounds = makeBounds(currentImage.bounds.x,currentImage.bounds.y,
+                                     (float)width/(float)screen.width,(float)height/(float)screen.height);
+    glBindTexture(GL_TEXTURE_2D, currentImage.textureID);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, newImage);
+    glBindTexture(GL_TEXTURE_2D, 0);
     glutPostRedisplay();
 }
 
@@ -119,15 +132,35 @@ void actualiseImage(unsigned char* newImage) {
 /// ///////////////////////////////////////////////////////////////////////////
 void clickMouse_GLIMAGIMP(int button,int state,int x,int y) {
     if (control.click_souris != NULL) {
-        (*control.click_souris)(button,state,x,y);
+        float xGL = (float)x/(float)screenWidth();
+        float yGL = 1.-(float)y/(float)screenHeight();
+        if(state == GLUT_DOWN)
+            control.pressedButton = button;
+        else
+            control.pressedButton = -1;
+        (*control.click_souris)(button,state,xGL,yGL);
     }
     else {
         printf("Fonction souris non fixée\n");
     }
 }
 void motionMouse_GLIMAGIMP(int x,int y) {
+    float xGL = (float)x/(float)screenWidth();
+    float yGL = 1.-(float)y/(float)screenHeight();
+
+    float deltaX,deltaY;
+    if(control.oldX<0)
+        deltaX = 0;
+    else
+        deltaX = xGL - control.oldX;
+    if(control.oldY<0)
+        deltaY = 0;
+    else
+        deltaY = yGL - control.oldY;
+    control.oldX = xGL;
+    control.oldY = yGL;
     if (control.motion_souris != NULL) {
-        (*control.motion_souris)(x,y);
+        (*control.motion_souris)(xGL,yGL,deltaX,deltaY,control.pressedButton);
     }
     else {
         printf("Fonction motion souris non fixée\n");
@@ -136,20 +169,29 @@ void motionMouse_GLIMAGIMP(int x,int y) {
 
 void kbdSpFunc_GLIMAGIMP(int c, int x, int y) {
     if (control.press_spec_clavier != NULL) {
+        control.ALT = glutGetModifiers() == GLUT_ACTIVE_ALT;
+        control.CTRL =glutGetModifiers() == GLUT_ACTIVE_CTRL;
         (*control.press_spec_clavier)(c,x,y);
+        printf("%d %d\n",control.CTRL,control.ALT);
     }
     else {
         printf("Fonction clavier touche spéciales non fixée\n");
     }
 }
 
+void kbdSpUpFunc_GLIMAGIMP(int c, int x, int y) {
+
+}
+
 void kbdFunc_GLIMAGIMP(unsigned char c, int x, int y) {
     if (control.press_clavier != NULL) {
-        (*control.press_clavier)(c,x,y);
+        (*control.press_clavier)(c,x,y, control.CTRL, control.ALT);
     }
     else {
         printf("Fonction clavier non fixée\n");
     }
+    control.ALT = glutGetModifiers() == GLUT_ACTIVE_ALT;
+    control.CTRL =glutGetModifiers() == GLUT_ACTIVE_CTRL;
 }
 
 
@@ -167,13 +209,13 @@ void reshapeFunc(int width,int height) {
         screen.width = width;
         screen.height = height;
     }
+    currentImage.bounds.width = (float)currentImage.width / (float)width;
+    currentImage.bounds.height = (float)currentImage.height / (float)height;
     // printf("Nouvelle taille %d %d\n",screen.width,screen.height);
     glViewport( 0, 0, (GLint)width, (GLint)height );
     glMatrixMode( GL_PROJECTION );
     glLoadIdentity();
     gluOrtho2D(0.0,1.0,0.0,1.0);
-    glMatrixMode( GL_MODELVIEW );
-    glLoadIdentity();
     dessin.modified_tampon = 1;
     glutPostRedisplay();
 }
@@ -213,17 +255,11 @@ void initDisplay() {
     initGLextensions();
 #endif
     glActiveTextureARB(GL_TEXTURE0_ARB);
-    glBindTexture(GL_TEXTURE_2D,0);
-    glDisable(GL_TEXTURE_2D);
-
-    /// INITIALISATION DES FONCTIONS SPECIALES ...
 
     /// INITIALISATION CLASSIQUE OPENGL ...
     glDisable(GL_NORMALIZE);
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
-    glMatrixMode(GL_TEXTURE);
-    glLoadIdentity();
     glMatrixMode(GL_MODELVIEW);
     glShadeModel(GL_SMOOTH);
     glDisable(GL_BLEND);
@@ -232,8 +268,35 @@ void initDisplay() {
     glDisable(GL_TEXTURE_2D);
 
     CHECK_GL;
-    screen.background = makeColor(0,0,0,0);
+    screen.backgroundUI = makeColor(0,0,0,0);
+    screen.backgroundImage = makeColor(0,0,0,0);
+    screen.UIstartX = 0.78;
     //printf("Fin initialisation display\n");
+}
+
+void drawImage(){
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, currentImage.textureID);
+
+    glBegin(GL_QUADS);
+
+    glColor3f(1, 1, 1);
+
+    glTexCoord2f(0, 0);
+    glVertex2f(0, 1);
+
+    glTexCoord2f(0, 1);
+    glVertex2f(0,0);
+
+    glTexCoord2f(1, 1);
+    glVertex2f(1,0);
+
+    glTexCoord2f(1, 0);
+    glVertex2f(1,1);
+
+    glEnd();
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glDisable(GL_TEXTURE_2D);
 }
 
 void drawScene_GLIMAGIMP(void) {
@@ -243,13 +306,25 @@ void drawScene_GLIMAGIMP(void) {
     glMatrixMode( GL_MODELVIEW );
     glLoadIdentity();
 
-    glClearColor(screen.background.r,screen.background.g,screen.background.b,screen.background.a);
+    glClearColor(screen.backgroundImage.r,screen.backgroundImage.g,screen.backgroundImage.b,screen.backgroundImage.a);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     /// ****************** DESSIN DE L'IMAGE ***************************************
-    //TODO
-    glDrawPixels(currentImage.width,currentImage.height,GL_RGB,GL_UNSIGNED_BYTE,currentImage.src);
 
+    glTranslatef( currentImage.bounds.x + (screen.UIstartX - currentImage.bounds.width* currentImage.zoom)/2.,
+                  currentImage.bounds.y + 0.5 - currentImage.bounds.height* currentImage.zoom/2.,0);
+    glScalef(currentImage.bounds.width * currentImage.zoom, currentImage.bounds.height * currentImage.zoom,1);
+    drawImage();
+    glLoadIdentity();
+    glColor3f(screen.backgroundUI.r,screen.backgroundUI.g,screen.backgroundUI.b);
+    drawCarre(screen.UIstartX,0,1,1);
+
+    glColor3f(0.3,0.42,0.45);
+    drawCarre(screen.UIstartX-0.005,0,screen.UIstartX,1);
+    glColor3f(0.25,0.3,0.26);
+    glLineWidth(3);
+    drawCarreVide(screen.UIstartX-0.005,-0.1,screen.UIstartX,1.1);
+    glLineWidth(1);
     /// ****************** DESSIN CLASSIQUE ****************************************
     if (dessin.dessin_screen != NULL) {
         (*dessin.dessin_screen)();
@@ -280,13 +355,17 @@ void initGLIMAGIMP_IHM(unsigned int w_im,unsigned int h_im,unsigned char *tabRVB
     screen.fullscreen = fullscreen;
     currentImage.width = w_im;
     currentImage.height = h_im;
-    currentImage.src = tabRVB;
-    glPixelStorei(GL_UNPACK_ALIGNMENT,1);
+    currentImage.zoom = 1;
+    currentImage.bounds = makeBounds(0,0,(float)w_im/(float)w_ecran,(float)h_im/(float)h_ecran);
 
     control.click_souris = NULL;
     control.press_clavier = NULL;
     control.press_spec_clavier = NULL;
     control.motion_souris = NULL;
+    control.oldX = control.oldY = -1;
+    control.pressedButton = -1;
+    control.ALT = control.CTRL = 0;
+
     dessin.dessin_screen = NULL;
 
 
@@ -309,6 +388,15 @@ void initGLIMAGIMP_IHM(unsigned int w_im,unsigned int h_im,unsigned char *tabRVB
         exit(1);
     }
     initDisplay();
+    glGenTextures(1, &currentImage.textureID);
+    if(currentImage.textureID){
+        glBindTexture(GL_TEXTURE_2D, currentImage.textureID);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w_im, h_im, 0, GL_RGB, GL_UNSIGNED_BYTE, tabRVB);
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
+
+    glPixelStorei(GL_UNPACK_ALIGNMENT,1);
     /* association de la fonction de dimensionnement */
     glutReshapeFunc(reshapeFunc);
     /* association de la fonction d'affichage */
@@ -323,6 +411,7 @@ void initGLIMAGIMP_IHM(unsigned int w_im,unsigned int h_im,unsigned char *tabRVB
     /* association de la fonction de traitement des touches*/
     /* spéciales du clavier                                */
     glutSpecialFunc(kbdSpFunc_GLIMAGIMP);
+    glutSpecialUpFunc(kbdSpUpFunc_GLIMAGIMP);
     /* fonction d'attente */
     glutIdleFunc(idleFunc);
     if (fullscreen){
@@ -343,8 +432,13 @@ void launchApp(){
     glutMainLoop();
 }
 
-void setBackground(Color back){
-    screen.background = back;
+void setBackground(Color backUI, Color backImage){
+    screen.backgroundUI = backUI;
+    screen.backgroundImage = backImage;
+}
+
+float getUIStartX(){
+    return screen.UIstartX;
 }
 
 /// ///////////////////////////////////////////////////////////////////////////
@@ -372,8 +466,8 @@ void printInfo() {
     printf("**************************************\n");
 }
 
-int screenHeight() { return screen.height; }
-int screenWidth() { return screen.width; }
+unsigned int screenHeight() { return screen.height; }
+unsigned int screenWidth() { return screen.width; }
 int isFullscreen() { return screen.fullscreen; }
 
 void saveDessin(){
@@ -384,6 +478,31 @@ void modeDebug(int debug){
     dessin.debug = debug;
 }
 
+void translateImage(float x, float y){
+    currentImage.bounds =makeBounds(currentImage.bounds.x + x, currentImage.bounds.y +y,
+               currentImage.bounds.width, currentImage.bounds.height);
+}
+
+void zoomPlus(){
+    currentImage.zoom *= 1.25;
+    if(currentImage.zoom>3.)
+        currentImage.zoom = 3.;
+    else if(currentImage.zoom>0.9 && currentImage.zoom<1.1)
+        currentImage.zoom = 1;
+}
+
+
+void zoomMoins(){
+    currentImage.zoom *= 0.8;
+    if(currentImage.zoom<0.33)
+        currentImage.zoom = 0.3;
+    else if(currentImage.zoom>0.9 && currentImage.zoom<1.1)
+        currentImage.zoom = 1;
+}
+
+Bounds imageBounds(){
+    return currentImage.bounds;
+}
 
 void setFullsreen(int fullscreen){
     screen.fullscreen = fullscreen;
@@ -481,21 +600,25 @@ void setButtonInvisible(Button *b, int invisible){
     b->invisible = invisible;
 }
 
+void setButtonLabel(Button *b, char* label){
+    free(b->label);
+    b->label = malloc(sizeof(char)*strlen(label)+1);
+    strcpy(b->label,label);
+}
+
 /// ///////////////////////////////////////////////////////////////////////////
 /// Sliders
 /// ///////////////////////////////////////////////////////////////////////////
 void makeCursorBounds(Slider* s){
     float height = (float)glutBitmapWidth(GLUT_BITMAP_8_BY_13,'_') * 8./(13.*(float)screen.height);
     float h = (s->bounds.y2-height) - s->bounds.y;
-    s->cursorBounds = makeBounds(s->bounds.x*1.1 + (s->value-0.01) * s->bounds.width*0.9,s->bounds.y+h*0.25,
-                                0.018 * s->bounds.width,h*0.5);
+    s->cursorBounds = makeBounds(s->bounds.x*1.1 + (s->value-0.01) * s->bounds.width*0.8,s->bounds.y+h*0.3,
+                                0.016 * s->bounds.width,h*0.5);
 }
 
-Slider makeSlider(char *label, Bounds bounds, Color fore, Color back,
+Slider makeSlider(Bounds bounds, Color fore, Color back,
                   void (*setHandle)(float)){
     Slider s;
-    s.label = malloc(sizeof(char)*strlen(label)+1);
-    strcpy(s.label,label);
     s.bounds = bounds;
     s.fore = fore;
     s.back = back;
@@ -510,19 +633,16 @@ Slider makeSlider(char *label, Bounds bounds, Color fore, Color back,
 }
 
 void privateDrawSlider(const Slider* s,const Color* foreCursor,const Color* backCursor, const Color* fore){
-    float width = (float)glutBitmapLength(GLUT_BITMAP_8_BY_13,(unsigned char*)(s->label))/(float)screen.width;
     float height = (float)glutBitmapWidth(GLUT_BITMAP_8_BY_13,'_') * 8./(13.*(float)screen.height);
     glColor4f(fore->r,fore->g,fore->b,fore->a);
-    writeString(s->bounds.x + s->bounds.width/2. - width/2.,
-               s->bounds.y2-height,s->label);
     float h2 = (s->bounds.y2-height) - s->bounds.y;
-    drawLigne(s->bounds.x*1.1,s->bounds.y + h2/2.,
-              s->bounds.x*1.1+s->bounds.width*0.9,s->bounds.y + h2/2.);
+    drawLigne(s->bounds.x*1.1,s->bounds.y + h2/2. + height/2.,
+              s->bounds.x*1.1+s->bounds.width*0.8,s->bounds.y + h2/2. + height/2.);
     writeString(s->bounds.x,s->bounds.y + h2/2,"0");
     writeString(s->bounds.x2,s->bounds.y + h2/2,"100%");
     char* valueStr = malloc(sizeof(char)*6);
     sprintf(valueStr,"%3.2f",s->value*100);
-    width = (float)glutBitmapLength(GLUT_BITMAP_8_BY_13,(unsigned char*)(valueStr))/(float)screen.width;
+    float width = (float)glutBitmapLength(GLUT_BITMAP_8_BY_13,(unsigned char*)(valueStr))/(float)screen.width;
     writeString(s->bounds.x + s->bounds.width/2. - width/2.,
                s->bounds.y,valueStr);
     glColor4f(backCursor->r,backCursor->g,backCursor->b,backCursor->a);
@@ -575,7 +695,7 @@ void leaveSlider(Slider *s){
 }
 
 void setSliderValueFromPos(Slider *b, float x){
-    b->value = (x-b->bounds.x*1.1)/(b->bounds.width*0.9);
+    b->value = (x-b->bounds.x*1.1)/(b->bounds.width*0.8);
     b->value = fminf(1,fmaxf(0,b->value));
     makeCursorBounds(b);
 }

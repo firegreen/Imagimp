@@ -26,11 +26,11 @@
 		<Compiler>
 			<Add option="-Wall" />
 		</Compiler>
-		<Unit filename="include/Calque.h" />
 		<Unit filename="include/Imagimp.h" />
 		<Unit filename="include/PPM.h" />
 		<Unit filename="include/dliste.h" />
 		<Unit filename="include/interface.h" />
+		<Unit filename="include/layer.h" />
 		<Unit filename="include/outils.h" />
 		<Unit filename="include/pile.h" />
 		<Unit filename="src/glimagimp/interface.c">
@@ -39,13 +39,13 @@
 		<Unit filename="src/glimagimp/outils.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="src/imagimp/Calque.c">
-			<Option compilerVar="CC" />
-		</Unit>
 		<Unit filename="src/imagimp/Imagimp.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="src/imagimp/PPM.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/imagimp/layer.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="src/imagimp/main.c">

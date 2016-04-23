@@ -24,13 +24,16 @@ void setBpixel(const Layer *l, unsigned int x, unsigned int y, unsigned long Bva
     l->rgb[3*(y*l->width + x)+2] = Bvalue;
 }
 
-void makeLayer(Layer* l, const unsigned char* rgb, unsigned int width, unsigned int height){
+void makeLayer(Layer* l, const unsigned char* rgb, unsigned int width, unsigned int height, unsigned int x,
+               unsigned int y){
     unsigned long size = height*width*3;
-    l->rgb = malloc(size);
+    l->rgb = malloc(size*sizeof(unsigned char));
     memcpy(l->rgb,rgb,sizeof(unsigned char)*size);
     l->height = height;
     l->width = width;
-    l->melange = normalBlend;
+    l->x = x;
+    l->y = y;
+    l->melange = mulBlend;
     l->opacity = 1;
     l->luts = NULL;
     makeRedHistogrammeFromLayer(l->histogrammes + RED_H,
@@ -43,17 +46,54 @@ void makeLayer(Layer* l, const unsigned char* rgb, unsigned int width, unsigned 
                                 l);
 }
 
-void makeEmptyLayer(Layer* l, unsigned int width, unsigned int height){
+void makeEmptyLayer(Layer* l, unsigned int width, unsigned int height, unsigned int x, unsigned int y){
     unsigned long size = height*width*3;
     l->rgb = malloc(height*width*3);
-    int i,j;
-    for(i=0;i<size-42;i += 40){
-        for(j=0;j<40;j+=2)
-            l->rgb[i+j] = l->rgb[i+j+1] = l->rgb[i+j+2] = 255 - (120*(i%3));
+    int i,j,k;
+    int nbValuesPerWidth = width*3;
+    int block = nbValuesPerWidth*5;
+    /*for(i=0;i<size;i++)
+        l->rgb[i] = 255;*/
+    for(i=0;i<size;i += block){
+        if((i/nbValuesPerWidth)%4==0)
+            for(k=0;k<block/3;k++){
+                int pos = k*3;
+                for(j=0;j<3;j++)
+                {
+                   l->rgb[i+j+pos] = (255 - (40*(i%(5-j))));
+                }
+            }
+        else if((i/nbValuesPerWidth)%4==1)
+            for(k=0;k<block/3;k++){
+                int pos = k*3;
+                for(j=0;j<3;j++)
+                {
+                   l->rgb[i+j+pos] = (255 - (40*(i%(7-j))));
+                }
+            }
+        else if((i/nbValuesPerWidth)%4==2)
+            for(k=0;k<block/3;k++){
+                int pos = k*3;
+                for(j=0;j<3;j++)
+                {
+                   l->rgb[i+j+pos] = (255 - (40*(i%(9-j))));
+                }
+            }
+        else
+            for(k=0;k<block/3;k++){
+                int pos = k*3;
+                for(j=0;j<3;j++)
+                {
+                   l->rgb[i+j+pos] = (255 - (10*(i%(19-j))));
+                }
+            }
+
     }
     l->height = height;
     l->width = width;
-    l->melange = normalBlend;
+    l->x = x;
+    l->y = y;
+    l->melange = mulBlend;
     l->opacity = 1;
     l->luts = NULL;
     for(i=0;i<256;i++){
@@ -86,7 +126,7 @@ void makeRedHistogrammeFromLayer(Histogramme *histogramme, const Layer *layer){
     memset(histogramme, 0, sizeof(Histogramme));
     histogramme->max=0;
     histogramme->min=(layer->width * layer->height);
-    for(i=0 ; i<histogramme->min - 2; i+=3) {
+    for(i=0 ; i<(histogramme->min*3) - 2; i+=3) {
         histogramme->nbPixelsPerValues[layer->rgb[i]]++;
     }
     for(i=0; i<256;i++)
@@ -102,7 +142,7 @@ void makeGreenHistogrammeFromLayer(Histogramme *histogramme, const Layer *layer)
     memset(histogramme, 0, sizeof(Histogramme));
     histogramme->max=0;
     histogramme->min=(layer->width * layer->height);
-    for(i=1 ; i<histogramme->min - 2; i+=3) {
+    for(i=1 ; i<(histogramme->min*3) - 2; i+=3) {
         histogramme->nbPixelsPerValues[layer->rgb[i]]++;
     }
     for(i=0; i<256;i++)
@@ -118,7 +158,7 @@ void makeBlueHistogrammeFromLayer(Histogramme *histogramme, const Layer *layer){
     memset(histogramme, 0, sizeof(Histogramme));
     histogramme->max=0;
     histogramme->min=(layer->width * layer->height);
-    for(i=2 ; i<histogramme->min - 2; i+=3) {
+    for(i=2 ; i<(histogramme->min*3) - 2; i+=3) {
         histogramme->nbPixelsPerValues[layer->rgb[i]]++;
     }
     for(i=0; i<256;i++)
@@ -159,9 +199,10 @@ void addBlend(Layer *out, const Layer *layerbelow, const Layer *layerabove){
     out->melange = addBlend;
     out->opacity = 1;
     out->luts = NULL;
-    unsigned int i;
-    for(i=0 ; i<(out->width * out->height*3); i++) {
-        out->rgb[i] = max(0,(min(255,((layerbelow->rgb[i] + layerabove->rgb[i] * layerabove->opacity)))));
+    unsigned int ibelow,iabove;
+    for(ibelow=layerabove->y*layerabove->width+layerabove->x, iabove=0;
+        iabove<(layerabove->width * layerabove->height*3); iabove++, ibelow++) {
+        out->rgb[iabove] = max(0,(min(255,((layerbelow->rgb[iabove] + layerabove->rgb[iabove] * layerabove->opacity)))));
     }
 
     makeRedHistogrammeFromLayer(out->histogrammes + RED_H,
@@ -180,10 +221,11 @@ void normalBlend(Layer *out, const Layer *layerbelow, const Layer *layerabove){
     out->melange = normalBlend;
     out->opacity = 1;
     out->luts = NULL;
-    unsigned int i;
-    for(i=0 ; i<(out->width * out->height*3); i++) {
-        out->rgb[i] = max(0,(min(255,((layerbelow->rgb[i]*100 + layerabove->rgb[i] * (layerabove->opacity *100))
-                                      /((1.+layerabove->opacity)*100)))));
+    unsigned int ibelow,iabove;
+    for(ibelow=layerabove->y*layerabove->width+layerabove->x, iabove=0;
+        iabove<(layerabove->width * layerabove->height*3); iabove++, ibelow++) {
+        out->rgb[ibelow] = max(0,(min(255,((layerbelow->rgb[iabove] + layerabove->rgb[iabove] * layerabove->opacity)
+                                      /(1.+layerabove->opacity)))));
     }
 
     makeRedHistogrammeFromLayer(out->histogrammes + RED_H,
@@ -203,9 +245,20 @@ void mulBlend(Layer *out, const Layer *layerbelow, const Layer *layerabove)
     out->melange = normalBlend;
     out->opacity = 1;
     out->luts = NULL;
-    unsigned int i;
-    for(i=0 ; i<(out->width * out->height*3); i++) {
-        out->rgb[i] = max(0,(min(255,((layerbelow->rgb[i] * (1.f - layerabove->opacity) + layerabove->rgb[i] * layerabove->opacity)))));
+    unsigned xStart = max(0,layerabove->x), yStart = max(0,layerabove->y),
+            xEnd = (min((layerabove->width*3+layerabove->x),(layerbelow->width*3))),
+            yEnd = min((layerabove->height+layerabove->y),(layerbelow->height));
+    unsigned int ibelow,iabove,jabove,cptabove,linebegin;
+    for(jabove=yStart;jabove<yEnd;jabove++){
+        linebegin = jabove*layerbelow->width*3;
+        ibelow =  linebegin + layerabove->x;
+        cptabove=(jabove-yStart)*layerabove->width*3;
+        for(iabove=xStart;iabove<xEnd;iabove++){
+                out->rgb[ibelow] = max(0,(min(255,((layerbelow->rgb[ibelow] *
+                                            (1.f - layerabove->opacity) + layerabove->rgb[cptabove] * layerabove->opacity)))));
+            ibelow++;
+            cptabove++;
+        }
     }
 
     makeRedHistogrammeFromLayer(out->histogrammes + RED_H,
@@ -271,28 +324,34 @@ void combineLUT(LUT *out, LUT *lut1, LUT *lut2){
 }
 
 void makeEmptyPicture(Picture* p, unsigned int width, unsigned int height){
-    makeEmptyLayer(&p->blank,width,height);
-    p->current = &p->blank;
+    makeEmptyLayer(&p->blank,width,height,0,0);
     p->currentID = 0;
-    p->nbLayers = 0;
+    p->nbLayers = 1;
     p->layers = *make_LayersList(&p->blank);
     p->lastlayer = &p->layers;
+    p->current = &p->layers;
     updateCfLayer(p);
 }
 
 void addNewEmptyLayer(Picture* p){
     Layer* empty = malloc(sizeof(Layer));
-    makeEmptyLayer(empty,p->blank.width,p->blank.height);
-    LayersList_insertAfter(p->lastlayer,empty);
-    p->current = empty;
-}
-
-void addNewLayer(Picture* p, unsigned char* rgbSrc){
-    Layer* empty = malloc(sizeof(Layer));
-    makeLayer(empty,rgbSrc,p->blank.width,p->blank.height);
+    makeEmptyLayer(empty,p->blank.width,p->blank.height,0,0);
     LayersList_insertAfter(p->lastlayer,empty);
     p->lastlayer = p->lastlayer->next;
-    p->current = p->lastlayer->element;
+    p->current = p->lastlayer;
+    p->currentID = p->nbLayers;
+    p->nbLayers++;
+
+}
+
+void addNewLayer(Picture* p, unsigned char* rgbSrc, int width, int height){
+    Layer* empty = malloc(sizeof(Layer));
+    makeLayer(empty,rgbSrc,width,height,0,0);
+    LayersList_insertAfter(p->lastlayer,empty);
+    p->lastlayer = p->lastlayer->next;
+    p->current = p->lastlayer;
+    p->currentID = p->nbLayers;
+    p->nbLayers++;
 }
 
 void makeCfPicture(Layer *lf, LayersList *layers){
@@ -303,6 +362,38 @@ void makeCfPicture(Layer *lf, LayersList *layers){
 }
 
 void updateCfLayer(Picture* p){
-    makeEmptyLayer(&p->Cf,p->blank.width,p->blank.height);
+    makeEmptyLayer(&p->Cf,p->blank.width,p->blank.height,0,0);
     makeCfPicture(&p->Cf,p->layers.next);
+}
+
+void removeCurrentLayer(Picture *p){
+    LayersList* tmp = NULL;
+    if(p->current != &p->layers){
+        if(p->current->previous!=NULL){
+            p->current->previous->next = p->current->next;
+            tmp = p->current->previous;
+            p->currentID --;
+            if(p->current->next!=NULL)
+                p->current->next->previous = p->current->previous;
+        }
+        if(p->current->next!=NULL){
+            p->current->next->previous = p->current->previous;
+            tmp = p->current->next;
+        }
+        freeLayer(&p->current->element);
+        free(p->current);
+        p->nbLayers--;
+        p->current = tmp;
+    }
+}
+
+Bounds layerBoundsInWindow(const Layer *l, unsigned int screen_width, unsigned int screen_height){
+    return makeBounds((float)l->x/(float)screen_width,(float)l->y/(float)screen_height,
+                      (float)l->width/(float)screen_width,(float)l->height/(float)screen_height);
+}
+
+void freeLayer(Layer **l){
+    free((*l)->rgb);
+    free(*l);
+    *l = NULL;
 }

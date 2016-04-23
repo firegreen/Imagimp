@@ -32,12 +32,6 @@
 #include <stdlib.h>
 #include <GL/glut.h>
 
-#ifndef ESCAPE_KEY
-#define ESCAPE_KEY 27
-#define DEL_KEY 127
-#define BACKSPACE_KEY 8
-#endif
-
 typedef struct {
     float r,g,b,a;
 } Color;

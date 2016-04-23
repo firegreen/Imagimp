@@ -29,6 +29,7 @@ typedef enum HistogrammeType{ RED_H=0, GREEN_H, BLUE_H, GRAYSCALE_H, NB_H_TYPES 
 typedef struct Layer {
     unsigned char *rgb;
     unsigned int width, height;
+    unsigned int x,y;
     blendFunction melange;
     float opacity;
     LUTsList* luts;
@@ -37,8 +38,12 @@ typedef struct Layer {
 } Layer;
 typedef Layer Layer;
 
-void makeLayer(Layer* l, const unsigned char* rgb, unsigned int width, unsigned int height);
-void makeEmptyLayer(Layer* l, unsigned int width, unsigned int height);
+void makeLayer(Layer* l, const unsigned char* rgb, unsigned int width, unsigned int height,
+               unsigned int x, unsigned int y);
+void makeEmptyLayer(Layer* l, unsigned int width, unsigned int height,
+                    unsigned int x, unsigned int y);
+Bounds layerBoundsInWindow(const Layer *l, unsigned int screen_width, unsigned int screen_height);
+void freeLayer(Layer** l);
 
 /*static unsigned char getRpixel(const Layer *l, unsigned int x, unsigned int y) {
     return l->rgb[3*(y*l->width + x)];
@@ -71,7 +76,7 @@ typedef struct {
     LayersList layers;
     LayersList* lastlayer;
     Layer Cf;
-    Layer* current;
+    LayersList* current;
     Layer blank;
     int nbLayers;
     int currentID;
@@ -79,8 +84,9 @@ typedef struct {
 
 void makeEmptyPicture(Picture *p, unsigned int width, unsigned int height);
 void addNewEmptyLayer(Picture* p);
-void addNewLayer(Picture* p, unsigned char* rgbSrc);
+void addNewLayer(Picture* p, unsigned char* rgbSrc, int width, int height);
 void makeCfPicture(Layer* lf, LayersList* layers);
+void removeCurrentLayer(Picture* p);
 void updateCfLayer(Picture* p);
 #include "pile.h"
 
@@ -90,10 +96,6 @@ typedef struct {
 
 DEFINIR_PILE(Historique, Action)
 
-
-void Image_importerPPM();
-void Image_exporterPPM();
-void Image_ajouterLayerVierge();
 /* Ajouter un Layer vierge (CAL_1), */
 /* Naviguer dans les Layers (CAL_2), */
 /* Modfier le paramètre d'opacité d'un Layer (CAL_3), */

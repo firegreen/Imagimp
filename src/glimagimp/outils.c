@@ -32,8 +32,16 @@ void writeString(float x, float y,  char* s)
 {
 		char* c;
 		glRasterPos2f(x, y);                // set position to start drawing fonts
-		for (c=s; *c != '\0'; c++)
-			glutBitmapCharacter(GLUT_BITMAP_8_BY_13, *c ); // draw the character to the screen
+        for (c=s; *c != '\0'; c++){
+            if((*c) == '\n')
+            {
+                glRasterPos2f(0, 0);                // set position to its initial state
+                y -= (float)glutBitmapWidth(GLUT_BITMAP_8_BY_13,'_') * 24./(13.*(float)screenHeight());
+                glRasterPos2f(x, y);
+            }
+            else
+                glutBitmapCharacter(GLUT_BITMAP_8_BY_13, *c ); // draw the character to the screen
+        }
 		glRasterPos2f(0, 0);                // set position to its initial state
 }
 
