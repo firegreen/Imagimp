@@ -30,6 +30,9 @@
 void initGLextensions() {
     glActiveTextureARB = (PFNGLACTIVETEXTUREARBPROC) wglGetProcAddress("glActiveTextureARB");
 }
+#include <windows.h>
+#else
+#include <unistd.h>
 #endif
 
 /// ///////////////////////////////////////////////////////////////////////////
@@ -225,11 +228,18 @@ void reshapeFunc(int width,int height) {
 void idleFunc(void)
 {
     dessin.cptidletime++;
-    if (dessin.debug && COMPUTE_FPS && (dessin.cptidletime%NOMBRE_SAMPLE_FPS == 0)) {
-        int instant = glutGet(GLUT_ELAPSED_TIME);
-        double t=(instant-dessin.instantPrec)/1000.0;
-        printf("FPS : %f\n",NOMBRE_SAMPLE_FPS/t);
-        dessin.instantPrec = instant;
+    int instant = glutGet(GLUT_ELAPSED_TIME);
+    int t=(instant-dessin.instantPrec);
+    dessin.instantPrec = instant;
+    int fpms = 1. / (NOMBRE_SAMPLE_FPS/1000.);
+    if(fpms > t)
+#ifdef WIN32
+    Sleep(fpms - t);
+#else
+    usleep((fpms - t)*1000);
+#endif
+    if (dessin.debug && COMPUTE_FPS) {
+        printf("time elapsed : %d\n",t);
         printInfo();
         glutPostRedisplay();
     }
@@ -449,20 +459,25 @@ void printInfo() {
     printf("\n");
     printf("**************************************\n");
     printf("              INFORMATIONS            \n");
-    printf("Taille ecran : %d/%d",screen.width,screen.height);
-    printf("Taille image : %d/%d",currentImage.width,currentImage.height);
-    printf("Fonction dessin ");
-    if (dessin.dessin_screen == NULL) printf("non");
-    printf(" fixée\n");
-    printf("Fonction souris ");
-    if (control.click_souris == NULL) printf("non");
-    printf(" fixée\n");
-    printf("Fonction clavier ");
-    if (control.press_clavier == NULL) printf("non");
-    printf(" fixée\n");
-    printf("Fonction clavier speciale ");
-    if (control.press_spec_clavier == NULL) printf("non");
-    printf(" fixée\n");
+    printf("Taille ecran : %d/%d\n",screen.width,screen.height);
+    printf("Taille image : %d/%d\n",currentImage.width,currentImage.height);
+    printf("Bouton de la souris presse:");
+    switch (control.pressedButton) {
+    case GLUT_LEFT_BUTTON:
+        printf("GAUCHE");
+        break;
+    case GLUT_RIGHT_BUTTON:
+        printf("DROITE");
+        break;
+    case GLUT_MIDDLE_BUTTON:
+        printf("MILIEU");
+        break;
+    default:
+        printf("AUCUN");
+        break;
+    }
+    printf("\n");
+    printf("Position Souris:(%f,%f)\n",control.oldX,control.oldY);
     printf("**************************************\n");
 }
 
@@ -485,7 +500,7 @@ void translateImage(float x, float y){
 
 void zoomPlus(){
     currentImage.zoom *= 1.25;
-    if(currentImage.zoom>3.)
+    if(currentImage.zoom>10.)
         currentImage.zoom = 3.;
     else if(currentImage.zoom>0.9 && currentImage.zoom<1.1)
         currentImage.zoom = 1;

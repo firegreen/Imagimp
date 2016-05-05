@@ -22,11 +22,7 @@ void Imagimp_quit(){
 
 void Imagimp_setOpacityToCurrentLayer(float opacity){
     Imagimp.picture.current->element->opacity = fmaxf(0,fminf(1,opacity));
-    if(Imagimp.displayMode){
-        updateCfLayer(&Imagimp.picture);
-        actualiseImage(Imagimp.picture.Cf.rgb, Imagimp.picture.Cf.width,Imagimp.picture.Cf.height);
-    }
-    glutPostRedisplay();
+    Imagimp_refresh(1);
 }
 
 float initial_opacity;
@@ -48,9 +44,9 @@ void openOpacityDialog(){
     activeDialog("Opacité",FLAGS_SLIDER | FLAGS_CANCEL | FLAGS_OK, handleOpacityDialog);
 }
 
-void Imagimp_refresh(){
+void Imagimp_refresh(int pixelsize){
     if(Imagimp.displayMode){
-        updateCfLayer(&Imagimp.picture);
+        updateCfLayer(&Imagimp.picture,pixelsize);
         actualiseImage(Imagimp.picture.Cf.rgb, Imagimp.picture.Cf.width,Imagimp.picture.Cf.height);
     }
     else{
@@ -68,7 +64,7 @@ void Imagimp_switchDisplay(){
     }
     else{
         Imagimp.displayMode = 1;
-        updateCfLayer(&Imagimp.picture);
+        updateCfLayer(&Imagimp.picture,1);
         actualiseImage(Imagimp.picture.Cf.rgb, Imagimp.picture.Cf.width,Imagimp.picture.Cf.height);
         setButtonLabel(Imagimp.buttons + BTN_DISPLAYMODE,"Affiche Calque Original");
     }
@@ -85,7 +81,8 @@ void handlePPMImportDialog(DIALOGBTNS answer){
             return;
         }
         addNewLayer(&Imagimp.picture,rgb,width,height);
-        Imagimp_refresh();
+        setButtonInactiv(Imagimp.buttons + BTN_DELETELAYER,0);
+        Imagimp_refresh(1);
         break;
     default:
         break;
@@ -95,12 +92,22 @@ void handlePPMImportDialog(DIALOGBTNS answer){
 void handlePPMExportDialog(DIALOGBTNS answer){
     switch (answer) {
     case BTN_OK:
-        updateCfLayer(&Imagimp.picture);
+        updateCfLayer(&Imagimp.picture,1);
         if(!writePPM(convertString(Dialog.input),Imagimp.picture.Cf.rgb,
                      Imagimp.picture.Cf.width,Imagimp.picture.Cf.height))
             activeDialog("Une erreur est servenu lors de l'écriture du fichier", FLAGS_OK,NULL);
         else
             activeDialog("L'image a bien été enregistré :)", FLAGS_OK,NULL);
+        break;
+    default:
+        break;
+    }
+}
+
+void handleLayerDeletingAskDialog(DIALOGBTNS answer){
+    switch (answer) {
+    case BTN_YES:
+        Imagimp_removeCurrentLayer();
         break;
     default:
         break;
@@ -119,17 +126,21 @@ void openPPMExportDialog(){
 
 void Imagimp_addEmptyLayer(){
     addNewEmptyLayer(&Imagimp.picture);
-    Imagimp_refresh();
+    Imagimp_refresh(1);
 }
 
 void openLayerDeletingAskDialog(){
-
+    activeDialog("Souhaitez-vous reellement supprimer le calque?",FLAGS_YES | FLAGS_NO,
+                 handleLayerDeletingAskDialog);
 }
 
 void Imagimp_removeCurrentLayer(){
-    if(Imagimp.picture.current->element != &Imagimp.picture.blank)
+    if(Imagimp.picture.current->previous !=NULL)
     {
         removeCurrentLayer(&Imagimp.picture);
+        if(Imagimp.picture.current->previous==NULL)
+            setButtonInactiv(Imagimp.buttons + BTN_DELETELAYER,1);
+        Imagimp_refresh(1);
     }
     else
         activeDialog("Impossible de supprimer le calque d'arrière plan", FLAGS_OK,NULL);
@@ -226,9 +237,12 @@ void Imagimp_launch(int argc, char *argv[]) {
         }
     }
     makeImageBase(w,h);
+    /*unsigned int width,height;
+    Imagimp.image_base = readPPM("images/pens.512.ppm",&width,&height);*/
+
     makeEmptyPicture(&Imagimp.picture, w,h);
     addNewLayer(&Imagimp.picture,Imagimp.image_base,w,h);
-    updateCfLayer(&Imagimp.picture);
+    updateCfLayer(&Imagimp.picture,1);
     Imagimp.hoveredButton = NULL;
     Imagimp.pressedButton = NULL;
     Imagimp.mouseButtonPressed=0;
@@ -253,10 +267,12 @@ void Imagimp_launch(int argc, char *argv[]) {
                                            IMAGIMPFORE,IMAGIMPBACK,openPPMExportDialog);
     Imagimp.buttons[BTN_LOAD] = makeButton("Charger",makeBounds(startX,0.8f,btnsizeX,btnsizeY),
                                            IMAGIMPFORE,IMAGIMPBACK,openPPMImportDialog);
-    Imagimp.buttons[BTN_OPACITY] = makeButton("Opacite",makeBounds(startX,0.75f,btnsizeX,btnsizeY),
+    Imagimp.buttons[BTN_OPACITY] = makeButton("Changer Opacite",makeBounds(startX,0.75f,btnsizeX,btnsizeY),
                                               IMAGIMPFORE,IMAGIMPBACK,openOpacityDialog);
-    Imagimp.buttons[BTN_DISPLAYMODE] = makeButton("Affiche Calque Original",makeBounds(startX,0.7f,btnsizeX,btnsizeY),
+    Imagimp.buttons[BTN_DISPLAYMODE] = makeButton("Afficher Calque Original",makeBounds(startX,0.7f,btnsizeX,btnsizeY),
                                                   IMAGIMPFORE,IMAGIMPBACK,Imagimp_switchDisplay);
+    Imagimp.buttons[BTN_DELETELAYER] = makeButton("Supprimer Calque Courant",makeBounds(startX,0.65f,btnsizeX,btnsizeY),
+                                                  IMAGIMPFORE,IMAGIMPBACK,openLayerDeletingAskDialog);
     initDialog();
     launchApp();
 }
@@ -354,6 +370,30 @@ void Imagimp_handleKeyboard(unsigned char ascii, int x, int y, char CTRL, char A
             glutPostRedisplay();
         }
         break;
+    case '\t':
+        if(glutGetModifiers()==GLUT_ACTIVE_SHIFT){
+            if(Imagimp.picture.currentID == 0){
+                changeCurrentTo(&Imagimp.picture,Imagimp.picture.nbLayers-1);
+                setButtonInactiv(Imagimp.buttons + BTN_DELETELAYER,1);
+            }
+            else
+                changeCurrentToBelowLayer(&Imagimp.picture);
+            if(Imagimp.picture.current->previous==NULL)
+                setButtonInactiv(Imagimp.buttons + BTN_DELETELAYER,1);
+            Imagimp_refresh(1);
+        }
+        else{
+            if(Imagimp.picture.currentID == Imagimp.picture.nbLayers-1){
+                changeCurrentTo(&Imagimp.picture,0);
+                setButtonInactiv(Imagimp.buttons + BTN_DELETELAYER,1);
+            }
+            else{
+                changeCurrentToAboveLayer(&Imagimp.picture);
+                setButtonInactiv(Imagimp.buttons + BTN_DELETELAYER,0);
+            }
+            Imagimp_refresh(1);
+        }
+        break;
     case ESCAPE_KEY: // Touche Escape
         Imagimp_quit();
         break;
@@ -363,7 +403,6 @@ void Imagimp_handleKeyboard(unsigned char ascii, int x, int y, char CTRL, char A
 }
 
 void Imagimp_handleKeyboardSpecial(int touche, int x, int y) {
-    printf("Touche spéciale : %d (souris: %d, %d)\n", touche, x, y);
     switch(touche) {
     case GLUT_KEY_F1:
         activeDialog("Coucou toi",FLAGS_OK | FLAGS_PROMPT, NULL);
@@ -408,6 +447,8 @@ void Imagimp_handleKeyboardSpecial(int touche, int x, int y) {
     case GLUT_KEY_HOME: break;
     case GLUT_KEY_END: break;
     case GLUT_KEY_INSERT: break;
+    default:
+        break;
     }
 }
 
@@ -462,6 +503,7 @@ void Imagimp_handleMouseClick(int button, int state, float xGL, float yGL) {
     }
     else { // state == GLUT_UP
         Imagimp.dragImage = Imagimp.dragLayer = 0;
+        Imagimp_refresh(1);
         if(Imagimp.mouseButtonPressed){
             Imagimp.mouseButtonPressed=0;
             if(Imagimp.pressedButton != NULL){
@@ -483,9 +525,8 @@ void Imagimp_handleMouseMotion(float xGL, float yGL, float deltaX, float deltaY,
         return;
     }
     else if(Imagimp.dragLayer){
-        Imagimp.picture.current->element->x += deltaX * screenWidth();
-        Imagimp.picture.current->element->y -= deltaY * screenHeight();
-        Imagimp_refresh();
+        translateCurrentLayer(&Imagimp.picture,deltaX * screenWidth(), -deltaY * screenHeight());
+        Imagimp_refresh(3);
         return;
     }
     else if(Imagimp.dialogMode){

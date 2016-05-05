@@ -21,9 +21,11 @@ void removeLastCharacter(String *s);
 char* convertString(String s);
 void freeString(String s);
 
-typedef enum { BTN_QUIT=0, BTN_SAVE, BTN_LOAD, BTN_OPACITY, BTN_DISPLAYMODE, MAIN_NBBUTTONS } MAINBTNS;
+typedef enum { BTN_QUIT=0, BTN_SAVE, BTN_LOAD, BTN_OPACITY,
+                BTN_DISPLAYMODE, BTN_DELETELAYER, MAIN_NBBUTTONS } MAINBTNS;
 typedef enum { BTN_YES=0, BTN_NO, BTN_OK, BTN_CANCEL, DIALOG_NBBUTTONS} DIALOGBTNS;
-typedef enum { FLAGS_YES=1,FLAGS_NO=2,FLAGS_OK=4,FLAGS_CANCEL=8, FLAGS_PROMPT=16, FLAGS_SLIDER=32} DIALOGFLAGS;
+typedef enum { FLAGS_YES=1,FLAGS_NO=2,FLAGS_OK=4,
+                FLAGS_CANCEL=8, FLAGS_PROMPT=16, FLAGS_SLIDER=32} DIALOGFLAGS;
 
 struct {
     Button buttons[MAIN_NBBUTTONS];
@@ -59,7 +61,7 @@ void Imagimp_handleKeyboardSpecial(int touche, int x, int y);
 void Imagimp_handleMouseClick(int button, int state, float xGL, float yGL);
 void Imagimp_handleMouseMotion(float xGL, float yGL, float deltaX, float deltaY, int pressedButton);
 void Imagimp_draw();
-void Imagimp_refresh();
+void Imagimp_refresh(int pixelsize);
 void Imagimp_quit();
 void Imagimp_switchDisplay();
 void Imagimp_removeCurrentLayer();

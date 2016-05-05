@@ -1,17 +1,35 @@
 #include "dliste.h"
 #include "outils.h"
 
-typedef enum EFFECT {CONTRASTPLUS, CONTRASTMINUS, MULTIPLE, NBEFFECTS} EFFECT;
+typedef enum EFFECT {CONTRASTPLUS, CONTRASTMINUS, MULTIPLE, NBEFFECTS} Effect;
+typedef enum BLENDMODE { BLEND_ADD, BLEND_MOY, BLEND_MULT, BLEND_SUB, BLEND_DIV } BlendMode;
+#define DEFAULTBLEND BLEND_MULT
 
 typedef struct Layer Layer;
-typedef void (*blendFunction)(Layer *out, const Layer *layerbelow, const Layer *layerabove);
 
-void normalBlend(Layer *out, const Layer *layerbelow, const Layer *layerabove);
-void addBlend(Layer *out, const Layer *layerbelow, const Layer *layerabove);
-void mulBlend(Layer *out, const Layer *layerbelow, const Layer *layerabove);
+void blendTwoLayer(Layer *lBelow, const Layer *lAbove, int inverseAction, int pixelsize);
+
+unsigned char moyBlend(unsigned char pixelBelow, float opacityBelow,
+                 unsigned char pixelAbove, float opacityAbove,
+                 void* parameters);
+unsigned char addBlend(unsigned char pixelBelow, float opacityBelow,
+              unsigned char pixelAbove, float opacityAbove,
+              void* parameters);
+unsigned char multBlend(unsigned char pixelBelow, float opacityBelow,
+              unsigned char pixelAbove, float opacityAbove,
+              void* parameters);
+unsigned char inversedMoyBlend(unsigned char pixelBelow, float opacityBelow,
+                    unsigned char pixelAbove, float opacityAbove,
+                    void* parameters);
+unsigned char subBlend(unsigned char pixelBelow, float opacityBelow,
+              unsigned char pixelAbove, float opacityAbove,
+              void* parameters);
+unsigned char divBlend(unsigned char pixelBelow, float opacityBelow,
+              unsigned char pixelAbove, float opacityAbove,
+              void* parameters);
 
 typedef struct {
-    EFFECT LUTEffect;
+    Effect LUTEffect;
     float effectAmount;
     unsigned char values[256];
 } LUT;
@@ -29,8 +47,8 @@ typedef enum HistogrammeType{ RED_H=0, GREEN_H, BLUE_H, GRAYSCALE_H, NB_H_TYPES 
 typedef struct Layer {
     unsigned char *rgb;
     unsigned int width, height;
-    unsigned int x,y;
-    blendFunction melange;
+    int x,y;
+    BlendMode blendMode;
     float opacity;
     LUTsList* luts;
     Histogramme histogrammes[NB_H_TYPES];
@@ -39,34 +57,21 @@ typedef struct Layer {
 typedef Layer Layer;
 
 void makeLayer(Layer* l, const unsigned char* rgb, unsigned int width, unsigned int height,
-               unsigned int x, unsigned int y);
+               int x, int y);
 void makeEmptyLayer(Layer* l, unsigned int width, unsigned int height,
-                    unsigned int x, unsigned int y);
+                    int x, int y);
+void copyLayer(Layer* l, const Layer* layerToCopy);
 Bounds layerBoundsInWindow(const Layer *l, unsigned int screen_width, unsigned int screen_height);
 void freeLayer(Layer** l);
-
-/*static unsigned char getRpixel(const Layer *l, unsigned int x, unsigned int y) {
-    return l->rgb[3*(y*l->width + x)];
-}
-static unsigned char getGpixel(const Layer *l, unsigned int x, unsigned int y) {
-    return l->rgb[3*(y*l->width + x) + 1];
-}
-static unsigned char getBpixel(const Layer *l, unsigned int x, unsigned int y) {
-    return l->rgb[3*(y*l->width + x) + 2];
-}
-
-static unsigned char getGrayscalepixel(const Layer *l, unsigned int x, unsigned int y) {
-    int pos = 3*(y*l->width + x);
-    return l->rgb[pos] * 0.299f + l->rgb[pos+1] * 0.587 + l->rgb[pos+2] * 0.114;
-}*/
 
 void makeRedHistogrammeFromLayer(Histogramme* histogramme, const Layer *layer);
 void makeGreenHistogrammeFromLayer(Histogramme* histogramme, const Layer *layer);
 void makeBlueHistogrammeFromLayer(Histogramme* histogramme, const Layer *layer);
 void makeGrayHistogrammeFromLayer(Histogramme* histogramme, const Layer *layer);
 void drawHistorgramme(const Histogramme* histogramme, HistogrammeType type, const Bounds *b);
+void updateHistogramme(Layer* l);
 
-void makeLUT(LUT* lut, EFFECT e, float effectAmout);
+void makeLUT(LUT* lut, Effect e, float effectAmout);
 void combineLUT(LUT* out, LUT* lut1, LUT* lut2);
 //void makeLUT(LUT* lut, EFFECT e, float effectAmout);
 
@@ -76,6 +81,7 @@ typedef struct {
     LayersList layers;
     LayersList* lastlayer;
     Layer Cf;
+    Layer beforeCf;
     LayersList* current;
     Layer blank;
     int nbLayers;
@@ -85,9 +91,15 @@ typedef struct {
 void makeEmptyPicture(Picture *p, unsigned int width, unsigned int height);
 void addNewEmptyLayer(Picture* p);
 void addNewLayer(Picture* p, unsigned char* rgbSrc, int width, int height);
-void makeCfPicture(Layer* lf, LayersList* layers);
+int pictureIsEmpty(const Picture* p);
+void makeCfPicture(Layer* lf, LayersList* layers, int pixelsize);
 void removeCurrentLayer(Picture* p);
-void updateCfLayer(Picture* p);
+void updateCfLayer(Picture* p, int pixelsize);
+void changeCurrentTo(Picture *p, int indice);
+void changeCurrentToAboveLayer(Picture* p);
+void changeCurrentToBelowLayer(Picture* p);
+void translateCurrentLayer(Picture* p, int tx, int ty);
+
 #include "pile.h"
 
 typedef struct {

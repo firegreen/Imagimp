@@ -24,16 +24,35 @@ void setBpixel(const Layer *l, unsigned int x, unsigned int y, unsigned long Bva
     l->rgb[3*(y*l->width + x)+2] = Bvalue;
 }
 
-void makeLayer(Layer* l, const unsigned char* rgb, unsigned int width, unsigned int height, unsigned int x,
-               unsigned int y){
-    unsigned long size = height*width*3;
-    l->rgb = malloc(size*sizeof(unsigned char));
-    memcpy(l->rgb,rgb,sizeof(unsigned char)*size);
+void makeLayer(Layer* l, const unsigned char* rgb, unsigned int width, unsigned int height,
+               int x, int y){
+    {
+        unsigned long size = height*width*3;
+        l->rgb = malloc(size);
+        memcpy(l->rgb,rgb,size);
+        l->height = height;
+        l->width = width;
+        l->x = x;
+        l->y = y;
+        l->blendMode = DEFAULTBLEND;
+        l->opacity = 1;
+        l->luts = NULL;
+        makeRedHistogrammeFromLayer(l->histogrammes + RED_H,
+                                    l);
+        makeBlueHistogrammeFromLayer(l->histogrammes + BLUE_H,
+                                    l);
+        makeGreenHistogrammeFromLayer(l->histogrammes + GREEN_H,
+                                    l);
+        makeGrayHistogrammeFromLayer(l->histogrammes + GRAYSCALE_H,
+                                    l);
+    }    unsigned long size = height*width*3;
+    l->rgb = malloc(size);
+    memcpy(l->rgb,rgb,size);
     l->height = height;
     l->width = width;
     l->x = x;
     l->y = y;
-    l->melange = mulBlend;
+    l->blendMode = DEFAULTBLEND;
     l->opacity = 1;
     l->luts = NULL;
     makeRedHistogrammeFromLayer(l->histogrammes + RED_H,
@@ -46,8 +65,32 @@ void makeLayer(Layer* l, const unsigned char* rgb, unsigned int width, unsigned 
                                 l);
 }
 
-void makeEmptyLayer(Layer* l, unsigned int width, unsigned int height, unsigned int x, unsigned int y){
+void copyLayer(Layer *l, const Layer *layerToCopy){
+    unsigned size = layerToCopy->height*layerToCopy->width*3;
+    if(l->rgb != NULL)
+        free(l->rgb);
+    l->rgb = malloc(size);
+    memcpy(l->rgb,layerToCopy->rgb,size);
+    l->height = layerToCopy->height;
+    l->width = layerToCopy->width;
+    l->x = layerToCopy->x;
+    l->y = layerToCopy->y;
+    l->blendMode = layerToCopy->blendMode;
+    l->opacity = layerToCopy->opacity;
+    l->luts = layerToCopy->luts;
+    int i;
+    for(i=0;i<256;i++){
+        l->histogrammes[RED_H].nbPixelsPerValues[i] = layerToCopy->histogrammes[RED_H].nbPixelsPerValues[i];
+        l->histogrammes[BLUE_H].nbPixelsPerValues[i] = layerToCopy->histogrammes[BLUE_H].nbPixelsPerValues[i];
+        l->histogrammes[GREEN_H].nbPixelsPerValues[i] = layerToCopy->histogrammes[GREEN_H].nbPixelsPerValues[i];
+        l->histogrammes[GRAYSCALE_H].nbPixelsPerValues[i] = layerToCopy->histogrammes[GRAYSCALE_H].nbPixelsPerValues[i];
+    }
+
+}
+
+void makeEmptyLayer(Layer* l, unsigned int width, unsigned int height, int x, int y){
     unsigned long size = height*width*3;
+    if(l->rgb!=NULL) free(l->rgb);
     l->rgb = malloc(height*width*3);
     int i,j,k;
     int nbValuesPerWidth = width*3;
@@ -93,15 +136,20 @@ void makeEmptyLayer(Layer* l, unsigned int width, unsigned int height, unsigned 
     l->width = width;
     l->x = x;
     l->y = y;
-    l->melange = mulBlend;
+    l->blendMode = DEFAULTBLEND;
     l->opacity = 1;
     l->luts = NULL;
-    for(i=0;i<256;i++){
-        l->histogrammes[RED_H].nbPixelsPerValues[i] = size;
-        l->histogrammes[BLUE_H].nbPixelsPerValues[i] = size;
-        l->histogrammes[GREEN_H].nbPixelsPerValues[i] = size;
-        l->histogrammes[GRAYSCALE_H].nbPixelsPerValues[i] = size;
+    for(i=0;i<255;i++){
+        l->histogrammes[RED_H].nbPixelsPerValues[i] = 0;
+        l->histogrammes[BLUE_H].nbPixelsPerValues[i] = 0;
+        l->histogrammes[GREEN_H].nbPixelsPerValues[i] = 0;
+        l->histogrammes[GRAYSCALE_H].nbPixelsPerValues[i] = 0;
     }
+    size /=3;
+    l->histogrammes[RED_H].nbPixelsPerValues[i] = size;
+    l->histogrammes[BLUE_H].nbPixelsPerValues[i] = size;
+    l->histogrammes[GREEN_H].nbPixelsPerValues[i] = size;
+    l->histogrammes[GRAYSCALE_H].nbPixelsPerValues[i] = size;
 
 }
 
@@ -193,85 +241,163 @@ void drawHistorgramme(const Histogramme *histogramme, HistogrammeType type, cons
     }
 }
 
-void addBlend(Layer *out, const Layer *layerbelow, const Layer *layerabove){
-    out->height = layerbelow->height;
-    out->width = layerbelow->width;
-    out->melange = addBlend;
-    out->opacity = 1;
-    out->luts = NULL;
-    unsigned int ibelow,iabove;
-    for(ibelow=layerabove->y*layerabove->width+layerabove->x, iabove=0;
-        iabove<(layerabove->width * layerabove->height*3); iabove++, ibelow++) {
-        out->rgb[iabove] = max(0,(min(255,((layerbelow->rgb[iabove] + layerabove->rgb[iabove] * layerabove->opacity)))));
-    }
-
-    makeRedHistogrammeFromLayer(out->histogrammes + RED_H,
-                                out);
-    makeBlueHistogrammeFromLayer(out->histogrammes + BLUE_H,
-                                out);
-    makeGreenHistogrammeFromLayer(out->histogrammes + GREEN_H,
-                                out);
-    makeGrayHistogrammeFromLayer(out->histogrammes + GRAYSCALE_H,
-                                out);
+void updateHistogramme(Layer* l){
+    makeRedHistogrammeFromLayer(l->histogrammes + RED_H,
+                                l);
+    makeBlueHistogrammeFromLayer(l->histogrammes + BLUE_H,
+                                l);
+    makeGreenHistogrammeFromLayer(l->histogrammes + GREEN_H,
+                                l);
+    makeGrayHistogrammeFromLayer(l->histogrammes + GRAYSCALE_H,
+                                l);
 }
 
-void normalBlend(Layer *out, const Layer *layerbelow, const Layer *layerabove){
-    out->height = layerbelow->height;
-    out->width = layerbelow->width;
-    out->melange = normalBlend;
-    out->opacity = 1;
-    out->luts = NULL;
-    unsigned int ibelow,iabove;
-    for(ibelow=layerabove->y*layerabove->width+layerabove->x, iabove=0;
-        iabove<(layerabove->width * layerabove->height*3); iabove++, ibelow++) {
-        out->rgb[ibelow] = max(0,(min(255,((layerbelow->rgb[iabove] + layerabove->rgb[iabove] * layerabove->opacity)
-                                      /(1.+layerabove->opacity)))));
-    }
+typedef unsigned char (*BlendPixelFunc)(unsigned char, float, unsigned char, float, void* parameters);
 
-    makeRedHistogrammeFromLayer(out->histogrammes + RED_H,
-                                out);
-    makeBlueHistogrammeFromLayer(out->histogrammes + BLUE_H,
-                                out);
-    makeGreenHistogrammeFromLayer(out->histogrammes + GREEN_H,
-                                out);
-    makeGrayHistogrammeFromLayer(out->histogrammes + GRAYSCALE_H,
-                                out);
-}
-
-void mulBlend(Layer *out, const Layer *layerbelow, const Layer *layerabove)
-{
-    out->height = layerbelow->height;
-    out->width = layerbelow->width;
-    out->melange = normalBlend;
-    out->opacity = 1;
-    out->luts = NULL;
-    unsigned xStart = max(0,layerabove->x), yStart = max(0,layerabove->y),
-            xEnd = (min((layerabove->width*3+layerabove->x),(layerbelow->width*3))),
-            yEnd = min((layerabove->height+layerabove->y),(layerbelow->height));
-    unsigned int ibelow,iabove,jabove,cptabove,linebegin;
-    for(jabove=yStart;jabove<yEnd;jabove++){
-        linebegin = jabove*layerbelow->width*3;
-        ibelow =  linebegin + layerabove->x;
-        cptabove=(jabove-yStart)*layerabove->width*3;
-        for(iabove=xStart;iabove<xEnd;iabove++){
-                out->rgb[ibelow] = max(0,(min(255,((layerbelow->rgb[ibelow] *
-                                            (1.f - layerabove->opacity) + layerabove->rgb[cptabove] * layerabove->opacity)))));
-            ibelow++;
-            cptabove++;
+BlendPixelFunc functionFromBlendMode(BlendMode bm, int inverseAction){
+    if(inverseAction){
+        switch (bm) {
+        case BLEND_ADD:
+            return subBlend;
+        case BLEND_SUB:
+            return addBlend;
+        case BLEND_MULT:
+            return divBlend;
+        case BLEND_DIV:
+            return multBlend;
+        case BLEND_MOY:
+            return inversedMoyBlend;
+        default:
+            break;
         }
     }
-
-    makeRedHistogrammeFromLayer(out->histogrammes + RED_H,
-                                out);
-    makeBlueHistogrammeFromLayer(out->histogrammes + BLUE_H,
-                                out);
-    makeGreenHistogrammeFromLayer(out->histogrammes + GREEN_H,
-                                out);
-    makeGrayHistogrammeFromLayer(out->histogrammes + GRAYSCALE_H,
-                                out);
+    else{
+        switch (bm) {
+        case BLEND_ADD:
+            return addBlend;
+        case BLEND_SUB:
+            return subBlend;
+        case BLEND_MULT:
+            return multBlend;
+        case BLEND_DIV:
+            return divBlend;
+        case BLEND_MOY:
+            return moyBlend;
+        default:
+            break;
+        }
+    }
+    return multBlend;
 }
 
-void makeLUT(LUT* lut, EFFECT e, float amount){
+
+void blendTwoLayer(Layer *lBelow, const Layer *lAbove, int inverseAction, int pixelsize){
+
+    unsigned int   labovePpW = lAbove->width*3,
+                    lbelowPpW = lBelow->width*3;
+    unsigned int   xStartB, xStartA,
+                    yStartB, yStartA,
+                    xEndB, yEndB;
+
+    if(lAbove->x<0){
+        xStartB = 0;
+        xStartA = lAbove->x * -3;
+    }
+    else{
+        xStartB = lAbove->x * 3;
+        xStartA = 0;
+    }
+    xEndB = (min((lAbove->x * 3+labovePpW), lbelowPpW));
+    if(lAbove->y<0){
+        yStartB = 0;
+        yStartA = -lAbove->y;
+    }
+    else{
+        yStartB = lAbove->y;
+        yStartA = 0;
+    }
+    yEndB = min((lAbove->y+lAbove->height), lBelow->height);
+
+    unsigned int ibelow,lineIncA,lineIncB,iabove,cpt,endLine,offsetX,offsetY;
+    ibelow  = yStartB*lbelowPpW + xStartB;
+    iabove  = yStartA*labovePpW + xStartA;
+    offsetX = pixelsize*3;
+    offsetY = pixelsize*lbelowPpW;
+    lineIncA= labovePpW*pixelsize - (xStartA + (xEndB - xStartB)) + xStartA;
+    lineIncB= offsetY - xEndB + xStartB;
+    endLine = ibelow + (xEndB-xStartB) - offsetX;
+
+    BlendPixelFunc blendFunc = functionFromBlendMode(lAbove->blendMode,inverseAction);
+    void* parameters = NULL;
+    if(lAbove->blendMode==BLEND_MOY){
+        parameters = malloc(sizeof(float));
+        *((float*)parameters) =  lBelow->opacity+lAbove->opacity;
+    }
+
+
+    unsigned i,j;
+    while(endLine<=(yEndB-pixelsize)*lbelowPpW + xEndB){
+        while(ibelow<endLine){
+            for(cpt=0;cpt<3;cpt++){
+                unsigned char p =(*blendFunc)(lBelow->rgb[ibelow+cpt],lBelow->opacity,
+                                              lAbove->rgb[iabove+cpt],lAbove->opacity,
+                                              parameters);
+                for(i=ibelow+cpt;i<ibelow+offsetX;i+=3)
+                    for(j=i;j<i+offsetY;j+=lbelowPpW)
+                        lBelow->rgb[j] = p;
+
+            }
+            iabove +=offsetX;
+            ibelow +=offsetX;
+        }
+        while(ibelow<endLine+offsetX){
+                lBelow->rgb[ibelow] = (*blendFunc)(lBelow->rgb[ibelow],lBelow->opacity,
+                                                   lAbove->rgb[iabove],lAbove->opacity,
+                                                   parameters);
+            iabove ++;
+            ibelow ++;
+        }
+
+        iabove  += lineIncA;
+        ibelow  += lineIncB;
+        endLine += offsetY;
+    }
+}
+
+unsigned char addBlend(unsigned char pixelBelow, float opacityBelow,
+              unsigned char pixelAbove, float opacityAbove, void* parameters){
+    return min(255,(pixelBelow + pixelAbove*opacityAbove));
+}
+
+unsigned char moyBlend(unsigned char pixelBelow, float opacityBelow,
+                 unsigned char pixelAbove, float opacityAbove, void* parameters){
+    return (pixelBelow*opacityBelow + pixelAbove*opacityAbove)/(*((float*)parameters));
+}
+
+unsigned char multBlend(unsigned char pixelBelow, float opacityBelow,
+                       unsigned char pixelAbove, float opacityAbove, void* parameters)
+{
+    return pixelBelow + opacityAbove*(pixelAbove - pixelBelow);//pixelBelow*(1.-opacityAbove) + pixelAbove*opacityAbove;
+}
+
+unsigned char inversedMoyBlend(unsigned char pixelBelow, float opacityBelow,
+                                   unsigned char pixelAbove, float opacityAbove, void* parameters){
+    return (pixelBelow*(*((float*)parameters)) - pixelAbove*opacityAbove)/opacityBelow;
+}
+
+unsigned char subBlend(unsigned char pixelBelow, float opacityBelow,
+                        unsigned char pixelAbove, float opacityAbove, void* parameters){
+    if(pixelBelow<=pixelAbove*opacityAbove) return 0;
+    else return pixelBelow - pixelAbove*opacityAbove;
+}
+
+unsigned char divBlend(unsigned char pixelBelow, float opacityBelow,
+                        unsigned char pixelAbove, float opacityAbove,void* parameters){
+    if(pixelBelow<=pixelAbove*opacityAbove) return 0;
+    else return (pixelBelow<=pixelAbove*opacityAbove)/(1.-opacityAbove);
+}
+
+void makeLUT(LUT* lut, Effect e, float amount){
     lut->effectAmount = amount;
     lut->LUTEffect = e;
     int i;
@@ -324,13 +450,15 @@ void combineLUT(LUT *out, LUT *lut1, LUT *lut2){
 }
 
 void makeEmptyPicture(Picture* p, unsigned int width, unsigned int height){
+    p->blank.rgb = p->beforeCf.rgb = p->Cf.rgb = NULL;
     makeEmptyLayer(&p->blank,width,height,0,0);
+    copyLayer(&p->beforeCf,&p->blank);
     p->currentID = 0;
     p->nbLayers = 1;
     p->layers = *make_LayersList(&p->blank);
     p->lastlayer = &p->layers;
     p->current = &p->layers;
-    updateCfLayer(p);
+    updateCfLayer(p,1);
 }
 
 void addNewEmptyLayer(Picture* p){
@@ -338,52 +466,91 @@ void addNewEmptyLayer(Picture* p){
     makeEmptyLayer(empty,p->blank.width,p->blank.height,0,0);
     LayersList_insertAfter(p->lastlayer,empty);
     p->lastlayer = p->lastlayer->next;
-    p->current = p->lastlayer;
-    p->currentID = p->nbLayers;
     p->nbLayers++;
-
+    changeCurrentTo(p,p->nbLayers-1);
 }
+
+
 
 void addNewLayer(Picture* p, unsigned char* rgbSrc, int width, int height){
     Layer* empty = malloc(sizeof(Layer));
     makeLayer(empty,rgbSrc,width,height,0,0);
     LayersList_insertAfter(p->lastlayer,empty);
     p->lastlayer = p->lastlayer->next;
-    p->current = p->lastlayer;
-    p->currentID = p->nbLayers;
     p->nbLayers++;
+    changeCurrentTo(p,p->nbLayers-1);
 }
 
-void makeCfPicture(Layer *lf, LayersList *layers){
+void makeCfPicture(Layer *lf, LayersList *layers, int pixelsize){
     LayersList* current = layers;
     for(current = layers; current!=NULL;current=current->next){
-        (*current->element->melange)(lf,lf,current->element);
+        blendTwoLayer(lf,current->element,0, pixelsize);
     }
 }
 
-void updateCfLayer(Picture* p){
-    makeEmptyLayer(&p->Cf,p->blank.width,p->blank.height,0,0);
-    makeCfPicture(&p->Cf,p->layers.next);
+void updateCfLayer(Picture* p, int pixelsize){
+    copyLayer(&p->Cf,&p->beforeCf);
+    makeCfPicture(&p->Cf,p->current, pixelsize);
 }
 
 void removeCurrentLayer(Picture *p){
-    LayersList* tmp = NULL;
-    if(p->current != &p->layers){
-        if(p->current->previous!=NULL){
-            p->current->previous->next = p->current->next;
-            tmp = p->current->previous;
-            p->currentID --;
-            if(p->current->next!=NULL)
-                p->current->next->previous = p->current->previous;
-        }
-        if(p->current->next!=NULL){
+    if(p->current->previous!=NULL){
+        LayersList* tmp = p->current;
+        p->current->previous->next = p->current->next;
+        if(p->current->next)
             p->current->next->previous = p->current->previous;
-            tmp = p->current->next;
-        }
-        freeLayer(&p->current->element);
-        free(p->current);
+        if(p->current == p->lastlayer)
+            p->lastlayer = p->current->previous;
+        changeCurrentToBelowLayer(p);
+        freeLayer(&tmp->element);
+        free(tmp);
         p->nbLayers--;
-        p->current = tmp;
+    }
+}
+
+void changeCurrentTo(Picture* p, int indice){
+    if(indice<=0 || indice>=p->nbLayers || p->currentID==indice) return;
+    if(indice==0)
+    {
+        p->current = &p->layers;
+        p->currentID = 0;
+        copyLayer(&p->beforeCf,&p->blank);
+    }
+    else if(indice==1){
+        p->current = p->layers.next;
+        p->currentID = 1;
+        copyLayer(&p->beforeCf,&p->blank);
+    }
+    else if(p->currentID<indice){
+        for(;p->currentID<indice;p->currentID++){
+            blendTwoLayer(&p->beforeCf,p->current->element,0,1);
+            p->current = p->current->next;
+        }
+    }
+    else{
+        for(;p->currentID>indice;p->currentID--){
+            blendTwoLayer(&p->beforeCf,p->current->element,1,1);
+            p->current = p->current->previous;
+        }
+    }
+}
+
+void changeCurrentToAboveLayer(Picture* p){
+    if(p->current->next!=NULL){
+        blendTwoLayer(&p->beforeCf,p->current->element,0,1);
+        p->current = p->current->next;
+        p->currentID++;
+    }
+}
+
+void changeCurrentToBelowLayer(Picture* p){
+    if(p->current->previous!=NULL){
+        p->current = p->current->previous;
+        p->currentID--;
+        if(p->current->previous==NULL)
+            copyLayer(&p->beforeCf,&p->blank);
+        else
+            blendTwoLayer(&p->beforeCf,p->current->element,1,1);
     }
 }
 
@@ -396,4 +563,15 @@ void freeLayer(Layer **l){
     free((*l)->rgb);
     free(*l);
     *l = NULL;
+}
+
+void translateCurrentLayer(Picture *p, int tx, int ty){
+    if(p->current->previous!=NULL){
+        p->current->element->x += tx;
+        p->current->element->y += ty;
+    }
+}
+
+int pictureIsEmpty(const Picture* p){
+    return p->current->previous==NULL;
 }
