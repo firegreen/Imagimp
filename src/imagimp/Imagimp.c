@@ -374,23 +374,27 @@ void Imagimp_handleKeyboard(unsigned char ascii, int x, int y, char CTRL, char A
         if(glutGetModifiers()==GLUT_ACTIVE_SHIFT){
             if(Imagimp.picture.currentID == 0){
                 changeCurrentTo(&Imagimp.picture,Imagimp.picture.nbLayers-1);
-                setButtonInactiv(Imagimp.buttons + BTN_DELETELAYER,1);
             }
-            else
+            else{
                 changeCurrentToBelowLayer(&Imagimp.picture);
+            }
             if(Imagimp.picture.current->previous==NULL)
                 setButtonInactiv(Imagimp.buttons + BTN_DELETELAYER,1);
+            else
+                setButtonInactiv(Imagimp.buttons + BTN_DELETELAYER,0);
             Imagimp_refresh(1);
         }
         else{
-            if(Imagimp.picture.currentID == Imagimp.picture.nbLayers-1){
+            if(Imagimp.picture.currentID >= Imagimp.picture.nbLayers-1){
                 changeCurrentTo(&Imagimp.picture,0);
-                setButtonInactiv(Imagimp.buttons + BTN_DELETELAYER,1);
             }
             else{
                 changeCurrentToAboveLayer(&Imagimp.picture);
-                setButtonInactiv(Imagimp.buttons + BTN_DELETELAYER,0);
             }
+            if(Imagimp.picture.current->previous==NULL)
+                setButtonInactiv(Imagimp.buttons + BTN_DELETELAYER,1);
+            else
+                setButtonInactiv(Imagimp.buttons + BTN_DELETELAYER,0);
             Imagimp_refresh(1);
         }
         break;

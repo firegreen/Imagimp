@@ -394,7 +394,7 @@ unsigned char subBlend(unsigned char pixelBelow, float opacityBelow,
 unsigned char divBlend(unsigned char pixelBelow, float opacityBelow,
                         unsigned char pixelAbove, float opacityAbove,void* parameters){
     if(pixelBelow<=pixelAbove*opacityAbove) return 0;
-    else return (pixelBelow<=pixelAbove*opacityAbove)/(1.-opacityAbove);
+    else return (pixelBelow-pixelAbove*opacityAbove)/(1.-opacityAbove);
 }
 
 void makeLUT(LUT* lut, Effect e, float amount){

@@ -52,7 +52,6 @@ typedef struct Layer {
     float opacity;
     LUTsList* luts;
     Histogramme histogrammes[NB_H_TYPES];
-
 } Layer;
 typedef Layer Layer;
 

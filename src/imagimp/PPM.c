@@ -23,9 +23,7 @@ unsigned char *readPPM(const char *nom_fichier, unsigned int *width, unsigned in
         if(!buffer[0])
             return NULL;
         if(buffer[0] == '#') {
-            do car = fgetc(fichier); while(car != '\n' && car!=EOF);
-            if(car == EOF)
-                return NULL;
+            printf("commentaire :%s\n",buffer+1);
             continue;
         }
         switch(etape) {
