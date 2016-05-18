@@ -280,7 +280,7 @@ void initDisplay() {
     CHECK_GL;
     screen.backgroundUI = makeColor(0,0,0,0);
     screen.backgroundImage = makeColor(0,0,0,0);
-    screen.UIstartX = 0.78;
+    screen.UIstartX = 0.8;
     //printf("Fin initialisation display\n");
 }
 
@@ -320,12 +320,14 @@ void drawScene_GLIMAGIMP(void) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     /// ****************** DESSIN DE L'IMAGE ***************************************
-
-    glTranslatef( currentImage.bounds.x + (screen.UIstartX - currentImage.bounds.width* currentImage.zoom)/2.,
-                  currentImage.bounds.y + 0.5 - currentImage.bounds.height* currentImage.zoom/2.,0);
-    glScalef(currentImage.bounds.width * currentImage.zoom, currentImage.bounds.height * currentImage.zoom,1);
+    glTranslatef(screen.UIstartX/2.+currentImage.bounds.x,0.5+currentImage.bounds.y,0);
+    glScalef(currentImage.zoom, currentImage.zoom,1);
+    glTranslatef( -currentImage.bounds.width/2.,
+                  -currentImage.bounds.height/2.,0);
+    glScalef(currentImage.bounds.width,currentImage.bounds.height,1);
     drawImage();
     glLoadIdentity();
+
     glColor3f(screen.backgroundUI.r,screen.backgroundUI.g,screen.backgroundUI.b);
     drawCarre(screen.UIstartX,0,1,1);
 
@@ -515,8 +517,39 @@ void zoomMoins(){
         currentImage.zoom = 1;
 }
 
+float zoom(){
+    return currentImage.zoom;
+}
+
 Bounds imageBounds(){
-    return currentImage.bounds;
+    Bounds b;
+
+    b.x = -currentImage.bounds.width/2.;
+    b.x *= currentImage.zoom;
+    b.x += screen.UIstartX/2.+currentImage.bounds.x;
+
+    b.y = -currentImage.bounds.height/2.;
+    b.y *= currentImage.zoom;
+    b.y += 0.5+currentImage.bounds.y;
+
+    b.width = currentImage.bounds.width*currentImage.zoom;
+    b.height = currentImage.bounds.height*currentImage.zoom;
+    b.x2 = b.x+b.width;
+    b.y2 = b.y+b.height;
+    return b;
+}
+
+void GlPosToImagePos(float glX, float glY, float *x, float *y){
+    //x = glX/currentImage.zoom - currentImage.bounds.x
+    *x = glX - screen.UIstartX/2.-currentImage.bounds.x;
+    *x /= currentImage.zoom;
+    *x += currentImage.bounds.width/2.;
+    *x /= currentImage.bounds.width;
+
+    *y = glY - 0.5-currentImage.bounds.y;
+    *y /= currentImage.zoom;
+    *y += currentImage.bounds.height/2.;
+    *y /= currentImage.bounds.height;
 }
 
 void setFullsreen(int fullscreen){
@@ -536,11 +569,12 @@ void setFullsreen(int fullscreen){
 /// Buttons
 /// ///////////////////////////////////////////////////////////////////////////
 
-Button makeButton(char *label, Bounds bounds, Color fore, Color back,
-                  void (*clickHandle)(void)){
-    Button b;
-    b.label = malloc(sizeof(char)*strlen(label)+1);
-    strcpy(b.label,label);
+Component makeButton(char *label, Bounds bounds, Color fore, Color back,
+                  void (*clickHandle)(const void*)){
+    Component b;
+    b.type = BUTTON;
+    b.extends.Button.label = malloc(sizeof(char)*strlen(label)+1);
+    strcpy(b.extends.Button.label,label);
     b.bounds = bounds;
     b.fore = fore;
     b.back = back;
@@ -552,18 +586,19 @@ Button makeButton(char *label, Bounds bounds, Color fore, Color back,
     return b;
 }
 
-void privateDrawButton(const Button* b,const Color* fore, const Color* back){
+void privateDrawButton(const Component* b,const Color* fore, const Color* back){
     glColor4f(back->r,back->g,back->b,back->a);
     drawCarre(b->bounds.x,b->bounds.y,b->bounds.x2,b->bounds.y2);
     glColor4f(fore->r,fore->g,fore->b,fore->a);
     drawCarreVide(b->bounds.x,b->bounds.y,b->bounds.x2,b->bounds.y2);
-    float width = (float)glutBitmapLength(GLUT_BITMAP_8_BY_13,(unsigned char*)(b->label))/(float)screen.width;
+    float width = (float)glutBitmapLength(GLUT_BITMAP_8_BY_13,
+                                          (unsigned char*)(b->extends.Button.label))/(float)screen.width;
     float height = (float)glutBitmapWidth(GLUT_BITMAP_8_BY_13,'_') * 8./(13.*(float)screen.height);
     writeString(b->bounds.x + b->bounds.width/2. - width/2.,
-               b->bounds.y + b->bounds.height/2. - height/2.,b->label);
+               b->bounds.y + b->bounds.height/2. - height/2.,b->extends.Button.label);
 }
 
-void drawButton(const Button *b){
+void drawButton(const Component *b){
     if(!b->invisible){
         if(b->inactiv){
             float moy = (b->fore.r+b->fore.g+b->fore.b)/3.;
@@ -590,64 +625,67 @@ void drawButton(const Button *b){
 
 }
 
-void pressButton(Button *b){
-    b->press = 1;
+void pressButton(Component *b){
 }
 
-void releaseButton(Button *b, int activeAction){
-    b->press = 0;
-    if(activeAction && !b->inactiv && !b->invisible && b->clickHandle!=NULL) (*b->clickHandle)();
+void releaseButton(Component *b, int activeAction){
+    if(activeAction && !b->inactiv && !b->invisible && b->clickHandle!=NULL)
+        (*b->clickHandle)(NULL);
 }
 
-void hoverButton(Button *b){
-    b->hover = 1;
+void releaseRadioButton(Component *b, int activeAction){
+    if(activeAction && !b->inactiv && !b->invisible && b->clickHandle!=NULL)
+        (*b->clickHandle)(NULL);
+    b->inactiv = 0;
+    ComponentsList* l = b->extends.RadioButton.othersRadioButton;
+    while(l!=NULL){
+        l->componenent->inactiv = 1;
+        l = l->next;
+    }
 }
 
-void leaveButton(Button *b){
-    b->hover = 0;
+void hoverButton(Component *b){
 }
 
-void setButtonInactiv(Button *b, int inactiv){
-    b->inactiv = inactiv;
+void leaveButton(Component *b){
 }
 
-void setButtonInvisible(Button *b, int invisible){
-    b->invisible = invisible;
-}
-
-void setButtonLabel(Button *b, char* label){
-    free(b->label);
-    b->label = malloc(sizeof(char)*strlen(label)+1);
-    strcpy(b->label,label);
+void setButtonLabel(Component *b, char* label){
+    free(b->extends.Button.label);
+    b->extends.Button.label = malloc(sizeof(char)*strlen(label)+1);
+    strcpy(b->extends.Button.label,label);
 }
 
 /// ///////////////////////////////////////////////////////////////////////////
 /// Sliders
 /// ///////////////////////////////////////////////////////////////////////////
-void makeCursorBounds(Slider* s){
+void makeCursorBounds(Component* s){
     float height = (float)glutBitmapWidth(GLUT_BITMAP_8_BY_13,'_') * 8./(13.*(float)screen.height);
     float h = (s->bounds.y2-height) - s->bounds.y;
-    s->cursorBounds = makeBounds(s->bounds.x*1.1 + (s->value-0.01) * s->bounds.width*0.8,s->bounds.y+h*0.3,
-                                0.016 * s->bounds.width,h*0.5);
+    s->extends.Slider.cursorBounds =
+            makeBounds(s->bounds.x*1.1 + (s->extends.Slider.value-0.01) * s->bounds.width*0.8,
+                       s->bounds.y+h*0.3,0.016 * s->bounds.width,h*0.5);
 }
 
-Slider makeSlider(Bounds bounds, Color fore, Color back,
-                  void (*setHandle)(float)){
-    Slider s;
+Component makeSlider(Bounds bounds, Color fore, Color back,
+                  void (*setHandle)(const void*)){
+    Component s;
+    s.type = SLIDER;
     s.bounds = bounds;
     s.fore = fore;
     s.back = back;
-    s.setHandle = setHandle;
+    s.clickHandle = setHandle;
     s.press = 0;
     s.hover = 0;
     s.inactiv =0;
     s.invisible=0;
-    s.value = 0.5f;
+    s.extends.Slider.value = 0.5f;
     makeCursorBounds(&s);
     return s;
 }
 
-void privateDrawSlider(const Slider* s,const Color* foreCursor,const Color* backCursor, const Color* fore){
+#define scursorBounds s->extends.Slider.cursorBounds
+void privateDrawSlider(const Component* s,const Color* foreCursor,const Color* backCursor, const Color* fore){
     float height = (float)glutBitmapWidth(GLUT_BITMAP_8_BY_13,'_') * 8./(13.*(float)screen.height);
     glColor4f(fore->r,fore->g,fore->b,fore->a);
     float h2 = (s->bounds.y2-height) - s->bounds.y;
@@ -656,17 +694,17 @@ void privateDrawSlider(const Slider* s,const Color* foreCursor,const Color* back
     writeString(s->bounds.x,s->bounds.y + h2/2,"0");
     writeString(s->bounds.x2,s->bounds.y + h2/2,"100%");
     char* valueStr = malloc(sizeof(char)*6);
-    sprintf(valueStr,"%3.2f",s->value*100);
+    sprintf(valueStr,"%3.2f",s->extends.Slider.value*100);
     float width = (float)glutBitmapLength(GLUT_BITMAP_8_BY_13,(unsigned char*)(valueStr))/(float)screen.width;
     writeString(s->bounds.x + s->bounds.width/2. - width/2.,
                s->bounds.y,valueStr);
     glColor4f(backCursor->r,backCursor->g,backCursor->b,backCursor->a);
-    drawCarre(s->cursorBounds.x,s->cursorBounds.y,s->cursorBounds.x2,s->cursorBounds.y2);
+    drawCarre(scursorBounds.x,scursorBounds.y,scursorBounds.x2,scursorBounds.y2);
     glColor4f(foreCursor->r,foreCursor->g,foreCursor->b,foreCursor->a);
-    drawCarreVide(s->cursorBounds.x,s->cursorBounds.y,s->cursorBounds.x2,s->cursorBounds.y2);
+    drawCarreVide(scursorBounds.x,scursorBounds.y,scursorBounds.x2,scursorBounds.y2);
 }
 
-void drawSlider(const Slider *s){
+void drawSlider(const Component *s){
     if(!s->invisible){
         if(s->inactiv){
             float moy = (s->fore.r+s->fore.g+s->fore.b)/3.;
@@ -692,73 +730,148 @@ void drawSlider(const Slider *s){
     }
 }
 
-void pressSlider(Slider *s){
-    s->press = 1;
+void pressSlider(Component *s){
 }
 
-void releaseSlider(Slider *s, int activeAction){
-    s->press = 0;
-    if(activeAction && !s->inactiv && !s->invisible && s->setHandle!=NULL) (*s->setHandle)(s->value);
+void releaseSlider(Component *s, int activeAction){
+    if(activeAction && !s->inactiv && !s->invisible && s->clickHandle!=NULL)
+        (*s->clickHandle)(&s->extends.Slider.value);
 }
 
-void hoverSlider(Slider *s){
-    s->hover = 1;
+void hoverSlider(Component *s){
 }
 
-void leaveSlider(Slider *s){
-    s->hover = 0;
+void leaveSlider(Component *s){
 }
 
-void setSliderValueFromPos(Slider *b, float x){
-    b->value = (x-b->bounds.x*1.1)/(b->bounds.width*0.8);
-    b->value = fminf(1,fmaxf(0,b->value));
-    makeCursorBounds(b);
+void setSliderValueFromPos(Component *s, float x){
+    s->extends.Slider.value = (x-s->bounds.x*1.1)/(s->bounds.width*0.8);
+    s->extends.Slider.value = fminf(1,fmaxf(0,s->extends.Slider.value));
+    makeCursorBounds(s);
 }
 
-void setSliderValue(Slider *b, float value){
-    b->value = value;
-    b->value = fminf(1,fmaxf(0,b->value));
-    makeCursorBounds(b);
-}
-
-void setSliderInactiv(Slider *s, int inactiv){
-    s->inactiv = inactiv;
-}
-
-void setSliderInvisible(Slider *s, int invisible){
-    s->invisible = invisible;
+void setSliderValue(Component *s, float value){
+    s->extends.Slider.value = value;
+    s->extends.Slider.value = fminf(1,fmaxf(0,s->extends.Slider.value));
+    makeCursorBounds(s);
 }
 
 ///////////////////////////
 
-ButtonsList* makeButtonList(Button *b){
-    ButtonsList* list = malloc(sizeof(ButtonsList));
-    list->button = b;
+ComponentsList* makeComponentsList(Component *b){
+    ComponentsList* list = malloc(sizeof(ComponentsList));
+    list->componenent = b;
     list->next = NULL;
     return list;
 }
 
-void addButton(Button *b, ButtonsList **list){
-    ButtonsList* temp = *list;
-    *list = makeButtonList(b);
+void addComponent(Component *b, ComponentsList **list){
+    ComponentsList* temp = *list;
+    *list = makeComponentsList(b);
     (*list)->next = temp;
 }
 
 
-Button* findButtonInList(float x, float y, ButtonsList *list){
-    ButtonsList* pointer;
+Component* findComponentInList(float x, float y, ComponentsList *list){
+    ComponentsList* pointer;
     for(pointer = list; pointer!=NULL;pointer=pointer->next){
-        if(isInBounds(x,y,&pointer->button->bounds))
-            return pointer->button;
+        if(isInBounds(x,y,&pointer->componenent->bounds))
+            return pointer->componenent;
     }
     return NULL;
 }
 
-Button* findButtonInArray(float x, float y, Button buttons[], int nbbuttons){
+Component* findComponentInArray(float x, float y, Component* buttons, int nbbuttons){
     int i;
     for(i = 0; i<nbbuttons;i++){
         if(isInBounds(x,y,&buttons[i].bounds))
             return buttons+i;
     }
     return NULL;
+}
+
+void drawComponent(const Component* c){
+    switch (c->type) {
+    case BUTTON:
+    case RADIOBUTTON:
+        drawButton(c);
+        break;
+    case SLIDER:
+        drawSlider(c);
+        break;
+    default:
+        break;
+    }
+}
+
+void pressComponent(Component* c){
+    c->press = 1;
+    switch (c->type) {
+    case BUTTON:
+    case RADIOBUTTON:
+        pressButton(c);
+        break;
+    case SLIDER:
+        pressSlider(c);
+        break;
+    default:
+        break;
+    }
+}
+
+void releaseComponent(Component* c, int activeAction){
+    c->press = 0;
+    switch (c->type) {
+    case BUTTON:
+        releaseButton(c,activeAction);
+        break;
+    case RADIOBUTTON:
+        releaseRadioButton(c,activeAction);
+        break;
+    case SLIDER:
+        releaseSlider(c,activeAction);
+        break;
+    default:
+        break;
+    }
+}
+
+
+void hoverComponent(Component* c){
+    c->hover = 1;
+    switch (c->type) {
+    case BUTTON:
+    case RADIOBUTTON:
+        hoverButton(c);
+        break;
+    case SLIDER:
+        hoverSlider(c);
+        break;
+    default:
+        break;
+    }
+}
+
+void leaveComponent(Component* c){
+    c->hover = 0;
+    switch (c->type) {
+    case BUTTON:
+    case RADIOBUTTON:
+        leaveButton(c);
+        break;
+    case SLIDER:
+        leaveSlider(c);
+        break;
+    default:
+        break;
+    }
+}
+
+
+void setComponentInvisible(Component* c, int invisible){
+    c->invisible = invisible;
+}
+
+void setComponentInactiv(Component* c, int inactiv){
+    c->inactiv = inactiv;
 }

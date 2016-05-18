@@ -25,6 +25,10 @@ void Imagimp_setOpacityToCurrentLayer(float opacity){
     Imagimp_refresh(1);
 }
 
+void opacitySliderHandle(const void* opacity){
+    Imagimp_setOpacityToCurrentLayer(*((float*)opacity));
+}
+
 float initial_opacity;
 
 void handleOpacityDialog(DIALOGBTNS answer){
@@ -39,7 +43,7 @@ void handleOpacityDialog(DIALOGBTNS answer){
 
 void openOpacityDialog(){
     initial_opacity = Imagimp.picture.current->element->opacity;
-    Dialog.slider.setHandle = Imagimp_setOpacityToCurrentLayer;
+    Dialog.slider.clickHandle = opacitySliderHandle;
     setSliderValue(&Dialog.slider,Imagimp.picture.current->element->opacity);
     activeDialog("Opacité",FLAGS_SLIDER | FLAGS_CANCEL | FLAGS_OK, handleOpacityDialog);
 }
@@ -81,7 +85,7 @@ void handlePPMImportDialog(DIALOGBTNS answer){
             return;
         }
         addNewLayer(&Imagimp.picture,rgb,width,height);
-        setButtonInactiv(Imagimp.buttons + BTN_DELETELAYER,0);
+        setComponentInactiv(Imagimp.buttons + BTN_DELETELAYER,0);
         Imagimp_refresh(1);
         break;
     default:
@@ -114,6 +118,10 @@ void handleLayerDeletingAskDialog(DIALOGBTNS answer){
     }
 }
 
+void handleImportButton(const void* param){
+    openPPMImportDialog();
+}
+
 void openPPMImportDialog(){
     activeDialog("Importer un fichier PPM \n Saississez le nom du fichier:",
                  FLAGS_PROMPT | FLAGS_CANCEL | FLAGS_OK, handlePPMImportDialog);
@@ -139,7 +147,7 @@ void Imagimp_removeCurrentLayer(){
     {
         removeCurrentLayer(&Imagimp.picture);
         if(Imagimp.picture.current->previous==NULL)
-            setButtonInactiv(Imagimp.buttons + BTN_DELETELAYER,1);
+            setComponentInactiv(Imagimp.buttons + BTN_DELETELAYER,1);
         Imagimp_refresh(1);
     }
     else
@@ -173,6 +181,12 @@ void initDialog(){
     Dialog.yBtn = 0.375;
     Dialog.xText = 0.3;
     Dialog.yText = 0.6;
+    Dialog.components = makeComponentsList(Dialog.buttons);
+    int i;
+    for(i=1;i<DIALOG_NBBUTTONS;i++)
+    {
+        addComponent(Dialog.buttons+i,&Dialog.components);
+    }
     desactiveDialog();
 }
 
@@ -181,7 +195,7 @@ void makeImageBase(int width, int height){
     Imagimp.image_base = malloc(size*sizeof(unsigned char));
     //memset(Imagimp.image_base,0xaa,size);
     int nbValuesPerWidth = width*3;
-    int block = 20;
+    int block = 30;
     int i,j,k,l;
     for(i=0;i<nbValuesPerWidth;i += block){
         if((i/block)%4==0)
@@ -266,13 +280,18 @@ void Imagimp_launch(int argc, char *argv[]) {
     Imagimp.buttons[BTN_SAVE] = makeButton("Sauvegarder",makeBounds(startX,0.2f,btnsizeX,btnsizeY),
                                            IMAGIMPFORE,IMAGIMPBACK,openPPMExportDialog);
     Imagimp.buttons[BTN_LOAD] = makeButton("Charger",makeBounds(startX,0.8f,btnsizeX,btnsizeY),
-                                           IMAGIMPFORE,IMAGIMPBACK,openPPMImportDialog);
+                                           IMAGIMPFORE,IMAGIMPBACK,handleImportButton);
     Imagimp.buttons[BTN_OPACITY] = makeButton("Changer Opacite",makeBounds(startX,0.75f,btnsizeX,btnsizeY),
                                               IMAGIMPFORE,IMAGIMPBACK,openOpacityDialog);
     Imagimp.buttons[BTN_DISPLAYMODE] = makeButton("Afficher Calque Original",makeBounds(startX,0.7f,btnsizeX,btnsizeY),
                                                   IMAGIMPFORE,IMAGIMPBACK,Imagimp_switchDisplay);
     Imagimp.buttons[BTN_DELETELAYER] = makeButton("Supprimer Calque Courant",makeBounds(startX,0.65f,btnsizeX,btnsizeY),
                                                   IMAGIMPFORE,IMAGIMPBACK,openLayerDeletingAskDialog);
+    Imagimp.components = makeComponentsList(Imagimp.buttons);
+    for(i=1;i<MAIN_NBBUTTONS;i++)
+    {
+        addComponent(Imagimp.buttons+i,&Imagimp.components);
+    }
     initDialog();
     launchApp();
 }
@@ -379,9 +398,9 @@ void Imagimp_handleKeyboard(unsigned char ascii, int x, int y, char CTRL, char A
                 changeCurrentToBelowLayer(&Imagimp.picture);
             }
             if(Imagimp.picture.current->previous==NULL)
-                setButtonInactiv(Imagimp.buttons + BTN_DELETELAYER,1);
+                setComponentInactiv(Imagimp.buttons + BTN_DELETELAYER,1);
             else
-                setButtonInactiv(Imagimp.buttons + BTN_DELETELAYER,0);
+                setComponentInactiv(Imagimp.buttons + BTN_DELETELAYER,0);
             Imagimp_refresh(1);
         }
         else{
@@ -392,9 +411,9 @@ void Imagimp_handleKeyboard(unsigned char ascii, int x, int y, char CTRL, char A
                 changeCurrentToAboveLayer(&Imagimp.picture);
             }
             if(Imagimp.picture.current->previous==NULL)
-                setButtonInactiv(Imagimp.buttons + BTN_DELETELAYER,1);
+                setComponentInactiv(Imagimp.buttons + BTN_DELETELAYER,1);
             else
-                setButtonInactiv(Imagimp.buttons + BTN_DELETELAYER,0);
+                setComponentInactiv(Imagimp.buttons + BTN_DELETELAYER,0);
             Imagimp_refresh(1);
         }
         break;
@@ -426,8 +445,8 @@ void Imagimp_handleKeyboardSpecial(int touche, int x, int y) {
         if(Imagimp.dialogMode){
             if(!Dialog.slider.invisible)
             {
-                setSliderValue(&Dialog.slider,Dialog.slider.value-0.1);
-                releaseSlider(&Dialog.slider,1);
+                setSliderValue(&Dialog.slider,Dialog.slider.extends.Slider.value-0.1);
+                releaseComponent(&Dialog.slider,1);
             }
         }
         else
@@ -437,8 +456,8 @@ void Imagimp_handleKeyboardSpecial(int touche, int x, int y) {
         if(Imagimp.dialogMode){
             if(!Dialog.slider.invisible)
             {
-                setSliderValue(&Dialog.slider,Dialog.slider.value+0.1);
-                releaseSlider(&Dialog.slider,1);
+                setSliderValue(&Dialog.slider,Dialog.slider.extends.Slider.value+0.1);
+                releaseComponent(&Dialog.slider,1);
             }
         }
         else
@@ -457,19 +476,19 @@ void Imagimp_handleKeyboardSpecial(int touche, int x, int y) {
 }
 
 void Imagimp_handleMouseClick(int button, int state, float xGL, float yGL) {
-    Button* b;
+    Component* b;
     int redisplay = 0;
     if(Imagimp.dialogMode){
-        b = findButtonInArray(xGL,yGL,Dialog.buttons,DIALOG_NBBUTTONS);
+        b = findComponentInList(xGL,yGL,Dialog.components);
         if(!Dialog.slider.invisible){
-            unsigned char sliderHover = isInBounds(xGL,yGL,&Dialog.slider.cursorBounds);
+            unsigned char sliderHover = isInBounds(xGL,yGL,&Dialog.slider.extends.Slider.cursorBounds);
             if(sliderHover){
                 if (state == GLUT_DOWN) {
-                    pressSlider(&Dialog.slider);
+                    pressComponent(&Dialog.slider);
                     redisplay = 1;
                 }
                 else{
-                    releaseSlider(&Dialog.slider,1);
+                    releaseComponent(&Dialog.slider,1);
                     redisplay = 1;
                 }
             }
@@ -478,30 +497,36 @@ void Imagimp_handleMouseClick(int button, int state, float xGL, float yGL) {
                     if(isInBounds(xGL,yGL,&Dialog.slider.bounds)){
                         setSliderValueFromPos(&Dialog.slider,xGL);
                     }
-                    releaseSlider(&Dialog.slider,1);
+                    releaseComponent(&Dialog.slider,1);
                     redisplay = 1;
                 }
             }
         }
     }
     else
-        b = findButtonInArray(xGL,yGL,Imagimp.buttons,MAIN_NBBUTTONS);
+        b = findComponentInList(xGL,yGL,Imagimp.components);
     if (state == GLUT_DOWN) {
-        Bounds bounds;
+        Bounds bounds,bounds2;
+        bounds = imageBounds();
         if(!Imagimp.dialogMode){
             if (button == GLUT_RIGHT_BUTTON){
-                bounds = imageBounds();
                 Imagimp.dragImage = isInBounds(xGL,yGL,&bounds);
             }
             else if(button == GLUT_LEFT_BUTTON){
-                bounds = layerBoundsInWindow(Imagimp.picture.current->element,screenWidth(),screenHeight());
-                Imagimp.dragLayer = isInBounds(xGL,yGL,&bounds);
+                bounds2 = layerBoundsInWindow(Imagimp.picture.current->element,screenWidth(),screenHeight());
+                bounds2.x += bounds.x;
+                bounds2.y += bounds.y;
+                bounds2.width *= zoom();
+                bounds2.height *= zoom();
+                bounds2.x2 = bounds2.x+bounds2.width;
+                bounds2.y2 = bounds2.y+bounds2.height;
+                Imagimp.dragLayer = isInBounds(xGL,yGL,&bounds2);
             }
         }
         Imagimp.mouseButtonPressed=1;
         if(b!=NULL){
             Imagimp.pressedButton = b;
-            pressButton(b);
+            pressComponent(b);
             redisplay = 1;
         }
     }
@@ -511,7 +536,7 @@ void Imagimp_handleMouseClick(int button, int state, float xGL, float yGL) {
         if(Imagimp.mouseButtonPressed){
             Imagimp.mouseButtonPressed=0;
             if(Imagimp.pressedButton != NULL){
-                releaseButton(Imagimp.pressedButton,b==Imagimp.pressedButton);
+                releaseComponent(Imagimp.pressedButton,b==Imagimp.pressedButton);
                 Imagimp.pressedButton=NULL;
                 redisplay = 1;
             }
@@ -521,7 +546,7 @@ void Imagimp_handleMouseClick(int button, int state, float xGL, float yGL) {
 }
 
 void Imagimp_handleMouseMotion(float xGL, float yGL, float deltaX, float deltaY, int pressedButton) {
-    Button* b;
+    Component* b;
     int redisplay = 0;
     if(Imagimp.dragImage){
         translateImage(-deltaX,-deltaY);
@@ -534,20 +559,20 @@ void Imagimp_handleMouseMotion(float xGL, float yGL, float deltaX, float deltaY,
         return;
     }
     else if(Imagimp.dialogMode){
-        b = findButtonInArray(xGL,yGL,Dialog.buttons,DIALOG_NBBUTTONS);
+        b = findComponentInArray(xGL,yGL,Dialog.buttons,DIALOG_NBBUTTONS);
         if(!Dialog.slider.invisible){
-            unsigned char sliderHover = isInBounds(xGL,yGL,&Dialog.slider.cursorBounds);
+            unsigned char sliderHover = isInBounds(xGL,yGL,&Dialog.slider.extends.Slider.cursorBounds);
             if(sliderHover){
                 if(!Dialog.slider.hover)
                 {
-                    hoverSlider(&Dialog.slider);
+                    hoverComponent(&Dialog.slider);
                     redisplay = 1;
                 }
             }
             else{
                 if(Dialog.slider.hover)
                 {
-                    leaveSlider(&Dialog.slider);
+                    leaveComponent(&Dialog.slider);
                     redisplay = 1;
                 }
             }
@@ -559,17 +584,17 @@ void Imagimp_handleMouseMotion(float xGL, float yGL, float deltaX, float deltaY,
         }
     }
     else{
-        b = findButtonInArray(xGL,yGL,Imagimp.buttons,MAIN_NBBUTTONS);
+        b = findComponentInArray(xGL,yGL,Imagimp.buttons,MAIN_NBBUTTONS);
     }
 
     if(Imagimp.hoveredButton!=b && Imagimp.hoveredButton!=NULL){
-        leaveButton(Imagimp.hoveredButton);
+        leaveComponent(Imagimp.hoveredButton);
         Imagimp.hoveredButton=NULL;
         redisplay = 1;
     }
     if(b!=NULL){
         Imagimp.hoveredButton = b;
-        hoverButton(b);
+        hoverComponent(b);
         redisplay = 1;
     }
     if(redisplay) glutPostRedisplay();
@@ -585,7 +610,7 @@ void Dialog_draw(){
         writeString(Dialog.xText,Dialog.yText,Dialog.text);
     }
     for(i=0;i<DIALOG_NBBUTTONS;i++){
-        drawButton(Dialog.buttons+i);
+        drawComponent(Dialog.buttons+i);
     }
     if(Dialog.prompt){
         glColor4f(WHITE.r,WHITE.g,WHITE.b,WHITE.a);
@@ -608,7 +633,7 @@ void Dialog_draw(){
         }
     }
     else if(!Dialog.slider.invisible){
-        drawSlider(&Dialog.slider);
+        drawComponent(&Dialog.slider);
     }
 }
 
@@ -654,7 +679,7 @@ void desactiveDialog(){
 void Imagimp_draw() {
     int i;
     for(i=0;i<MAIN_NBBUTTONS;i++)
-        drawButton(Imagimp.buttons+i);
+        drawComponent(Imagimp.buttons+i);
     if(Imagimp.dialogMode){
         Dialog_draw();
     }

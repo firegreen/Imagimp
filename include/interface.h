@@ -147,16 +147,18 @@ extern void translateImage(float x, float y);
 extern Bounds imageBounds();
 
 extern void launchApp();
-/// ///////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
 /// Fonctions utilitaires
-/// ///////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
 extern void printInfo();
 
 extern unsigned int screenWidth();
 extern unsigned int screenHeight();
+extern void GlPosToImagePos(float glX, float glY, float* x, float* y);
 
 extern void zoomPlus();
 extern void zoomMoins();
+extern float zoom();
 
 extern void saveDessin();
 extern void modeDebug(int debug);
@@ -168,63 +170,58 @@ extern int isFullscreen();
 /// Boutons
 /// ///////////////////////////////////////////////////////////////////////////
 
-typedef struct Button {
-    char* label;
+typedef struct Component Component;
+typedef struct ComponentsList{
+    Component* componenent;
+    struct ComponentsList* next;
+} ComponentsList;
+
+ComponentsList* makeComponentsList(Component* c);
+extern void addComponent(Component* c, ComponentsList **list);
+Component* findComponentInList(float x, float y, ComponentsList* list);
+Component* findComponentInArray(float x, float y, Component *components, int nbComponents);
+
+typedef enum { BUTTON, RADIOBUTTON, SLIDER } ComponentType;
+
+typedef struct Component {
+    ComponentType type;
     Bounds bounds;
     Color fore;
     Color back;
-    void (*clickHandle)(void);
+    void (*clickHandle)(const void*);
     int hover;
     int press;
     int invisible;
     int inactiv;
-} Button;
+    union {
+        struct { char* label; } Button;
+        struct { char* label; ComponentsList* othersRadioButton; } RadioButton;
+        struct { Bounds cursorBounds; float value; } Slider;
+    } extends;
+} Component;
 
-extern Button makeButton(char* label, Bounds bounds,Color fore, Color back,
-                  void (*clickHandle)(void));
-extern void drawButton(const Button* b);
-extern void pressButton(Button* b);
-extern void releaseButton(Button* b, int activeAction);
-extern void hoverButton(Button* b);
-extern void leaveButton(Button* b);
-extern void setButtonLabel(Button *b, char* label);
-extern void setButtonInvisible(Button* b, int invisible);
-extern void setButtonInactiv(Button* b, int inactiv);
-
-typedef struct Slider {
-    Bounds bounds;
-    Bounds cursorBounds;
-    Color fore;
-    Color back;
-    void (*setHandle)(float);
-    int hover;
-    int press;
-    int invisible;
-    int inactiv;
-    float value;
-} Slider;
-
-extern Slider makeSlider(Bounds bounds, Color fore, Color back,
-                  void (*setHandle)(float));
-extern void drawSlider(const Slider* b);
-extern void pressSlider(Slider* b);
-extern void releaseSlider(Slider* b, int activeAction);
-extern void hoverSlider(Slider* b);
-extern void leaveSlider(Slider* b);
-extern void setSliderValue(Slider *b, float value);
-extern void setSliderValueFromPos(Slider* b, float x);
-extern void setSliderInvisible(Slider* b, int invisible);
-extern void setSliderInactiv(Slider* b, int inactiv);
+extern void drawComponent(const Component* c);
+extern void pressComponent(Component* c);
+extern void releaseComponent(Component* c, int activeAction);
+extern void hoverComponent(Component* c);
+extern void leaveComponent(Component* c);
+extern void setComponentInvisible(Component* c, int invisible);
+extern void setComponentInactiv(Component* c, int inactiv);
 
 
-typedef struct ButtonsList{
-    Button* button;
-    struct ButtonsList* next;
-} ButtonsList;
+extern Component makeButton(char* label, Bounds bounds,Color fore, Color back,
+                  void (*clickHandle)(const void*));
+extern void setButtonLabel(Component *c, char* label);
 
-ButtonsList* makeButtonList(Button* b);
-extern void addButton(Button* b, ButtonsList **list);
-Button* findButtonInList(float x, float y, ButtonsList* list);
-Button* findButtonInArray(float x, float y, Button buttons[], int nbbuttons);
+extern Component makeRadioButton(char* label, Bounds bounds,Color fore, Color back,
+                                void (*clickHandle)(const void*));
+extern void addButtonToRadioButtonList(Component* c);
+
+
+extern Component makeSlider(Bounds bounds, Color fore, Color back, void (*setHandle)(const void*));
+extern void setComponentValue(Component *s, float value);
+extern void setComponentValueFromPos(Component *s, float x);
+extern void setSliderValueFromPos(Component *s, float x);
+extern void setSliderValue(Component *s, float value);
 
 #endif

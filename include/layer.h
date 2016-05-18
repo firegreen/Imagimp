@@ -8,6 +8,9 @@ typedef enum BLENDMODE { BLEND_ADD, BLEND_MOY, BLEND_MULT, BLEND_SUB, BLEND_DIV 
 typedef struct Layer Layer;
 
 void blendTwoLayer(Layer *lBelow, const Layer *lAbove, int inverseAction, int pixelsize);
+void blendTwoLayerInRect(Layer *lBelow, const Layer *lAbove,
+                         int inverseAction, int pixelsize, int x, int y, int width, int height);
+
 
 unsigned char moyBlend(unsigned char pixelBelow, float opacityBelow,
                  unsigned char pixelAbove, float opacityAbove,
@@ -60,6 +63,7 @@ void makeLayer(Layer* l, const unsigned char* rgb, unsigned int width, unsigned 
 void makeEmptyLayer(Layer* l, unsigned int width, unsigned int height,
                     int x, int y);
 void copyLayer(Layer* l, const Layer* layerToCopy);
+void copyLayerInRect(Layer* l, const Layer* layerToCopy, int x, int y, int width, int height);
 Bounds layerBoundsInWindow(const Layer *l, unsigned int screen_width, unsigned int screen_height);
 void freeLayer(Layer** l);
 

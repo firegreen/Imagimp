@@ -85,7 +85,53 @@ void copyLayer(Layer *l, const Layer *layerToCopy){
         l->histogrammes[GREEN_H].nbPixelsPerValues[i] = layerToCopy->histogrammes[GREEN_H].nbPixelsPerValues[i];
         l->histogrammes[GRAYSCALE_H].nbPixelsPerValues[i] = layerToCopy->histogrammes[GRAYSCALE_H].nbPixelsPerValues[i];
     }
+}
 
+void copyLayerInRect(Layer *l, const Layer *layerToCopy, int x, int y,
+                     int width, int height){
+    unsigned int   labovePpW = layerToCopy->width*3,
+                    lbelowPpW = l->width*3;
+    unsigned int   xStartB, xStartA,
+                    yStartB, yStartA,
+                    xEndB, yEndB;
+    if(layerToCopy->x<0){
+        xStartB = max(0,(x * 3));
+        xStartA = layerToCopy->x * -3+xStartB;
+    }
+    else{
+        xStartB = max((layerToCopy->x * 3),(x * 3));
+        xStartA = xStartB-layerToCopy->x * 3;
+    }
+    xEndB = (min((layerToCopy->x * 3+labovePpW), x*3+width*3));
+    if(layerToCopy->y<0){
+        yStartB = max(0,y);
+        yStartA = -layerToCopy->y+yStartB;
+    }
+    else{
+        yStartB = max(layerToCopy->y,y);
+        yStartA = yStartB-layerToCopy->y;
+    }
+    yEndB = min((layerToCopy->y+layerToCopy->height), y+height);
+
+    unsigned int ibelow,lineIncA,lineIncB,iabove,endLine,offsetX,offsetY;
+    ibelow  = yStartB*lbelowPpW + xStartB;
+    iabove  = yStartA*labovePpW + xStartA;
+    offsetX = 1;
+    offsetY = lbelowPpW;
+    lineIncA= labovePpW - (xStartA + (xEndB - xStartB)) + xStartA;
+    lineIncB= offsetY - xEndB + xStartB;
+    endLine = ibelow + (xEndB-xStartB)- offsetX;
+    while(endLine<yEndB*lbelowPpW){
+        while(ibelow<endLine){
+            l->rgb[ibelow] = layerToCopy->rgb[iabove];
+            iabove ++;
+            ibelow ++;
+        }
+
+        iabove  += lineIncA;
+        ibelow  += lineIncB;
+        endLine += offsetY;
+    }
 }
 
 void makeEmptyLayer(Layer* l, unsigned int width, unsigned int height, int x, int y){
@@ -94,7 +140,7 @@ void makeEmptyLayer(Layer* l, unsigned int width, unsigned int height, int x, in
     l->rgb = malloc(height*width*3);
     int i,j,k;
     int nbValuesPerWidth = width*3;
-    int block = nbValuesPerWidth*5;
+    int block = nbValuesPerWidth*30;
     /*for(i=0;i<size;i++)
         l->rgb[i] = 255;*/
     for(i=0;i<size;i += block){
@@ -336,7 +382,80 @@ void blendTwoLayer(Layer *lBelow, const Layer *lAbove, int inverseAction, int pi
 
 
     unsigned i,j;
-    while(endLine<=(yEndB-pixelsize)*lbelowPpW + xEndB){
+    while(endLine<=(yEndB-pixelsize)*lbelowPpW){
+        while(ibelow<endLine){
+            for(cpt=0;cpt<3;cpt++){
+                unsigned char p =(*blendFunc)(lBelow->rgb[ibelow+cpt],lBelow->opacity,
+                                              lAbove->rgb[iabove+cpt],lAbove->opacity,
+                                              parameters);
+                for(i=ibelow+cpt;i<ibelow+offsetX;i+=3)
+                    for(j=i;j<i+offsetY;j+=lbelowPpW)
+                        lBelow->rgb[j] = p;
+
+            }
+            iabove +=offsetX;
+            ibelow +=offsetX;
+        }
+        while(ibelow<endLine+offsetX){
+                lBelow->rgb[ibelow] = (*blendFunc)(lBelow->rgb[ibelow],lBelow->opacity,
+                                                   lAbove->rgb[iabove],lAbove->opacity,
+                                                   parameters);
+            iabove ++;
+            ibelow ++;
+        }
+
+        iabove  += lineIncA;
+        ibelow  += lineIncB;
+        endLine += offsetY;
+    }
+}
+
+void blendTwoLayerInRect(Layer *lBelow, const Layer *lAbove, int inverseAction, int pixelsize, int x, int y, int width, int height)
+{
+    unsigned int   labovePpW = lAbove->width*3,
+                    lbelowPpW = lBelow->width*3;
+    unsigned int   xStartB, xStartA,
+                    yStartB, yStartA,
+                    xEndB, yEndB;
+    if(lAbove->x<0){
+        xStartB = max(0,(x*3));
+        xStartA = lAbove->x * -3+xStartB;
+    }
+    else{
+        xStartB = max((lAbove->x * 3),(x*3));
+        xStartA = xStartB-lAbove->x * 3;
+    }
+    xEndB = (min((lAbove->x * 3+labovePpW), x*3+width*3));
+    if(lAbove->y<0){
+        yStartB = max(0,y);
+        yStartA = -lAbove->y+yStartB;
+    }
+    else{
+        yStartB = max(lAbove->y,y);
+        yStartA = yStartB-lAbove->y;
+    }
+    yEndB = min((lAbove->y+lAbove->height), y+height);
+
+    unsigned int ibelow,lineIncA,lineIncB,iabove,cpt,endLine,offsetX,offsetY;
+    ibelow  = yStartB*lbelowPpW + xStartB;
+    printf("ibelow:%u\n",ibelow);
+    iabove  = yStartA*labovePpW + xStartA;
+    offsetX = pixelsize*3;
+    offsetY = pixelsize*lbelowPpW;
+    lineIncA= labovePpW*pixelsize - (xStartA + (xEndB - xStartB)) + xStartA;
+    lineIncB= offsetY - xEndB + xStartB;
+    endLine = ibelow + (xEndB-xStartB) - offsetX;
+
+    BlendPixelFunc blendFunc = functionFromBlendMode(lAbove->blendMode,inverseAction);
+    void* parameters = NULL;
+    if(lAbove->blendMode==BLEND_MOY){
+        parameters = malloc(sizeof(float));
+        *((float*)parameters) =  lBelow->opacity+lAbove->opacity;
+    }
+
+
+    unsigned i,j;
+    while(endLine<=(yEndB-pixelsize)*lbelowPpW){
         while(ibelow<endLine){
             for(cpt=0;cpt<3;cpt++){
                 unsigned char p =(*blendFunc)(lBelow->rgb[ibelow+cpt],lBelow->opacity,
@@ -429,24 +548,8 @@ void combineLUT(LUT *out, LUT *lut1, LUT *lut2){
     out->effectAmount = 1;
     out->LUTEffect = MULTIPLE;
     int i;
-    switch (lut2->LUTEffect) {
-    case CONTRASTPLUS:
-        for(i=1;i<127;i++)
-            out->values[i] = max(0,lut1->values[i]-126*lut2->LUTEffect);
-        for(i=128;i<255;i++)
-            out->values[i] = min(255,lut1->values[i]+126*lut2->LUTEffect);
-        break;
-    case CONTRASTMINUS:
-        for(i=0;i<127;i++)
-            out->values[i] = min(127,lut1->values[i]+126*lut2->LUTEffect);
-        for(i=128;i<256;i++)
-            out->values[i] = max(127,lut1->values[i]-126*lut2->LUTEffect);
-        break;
-    default:
-        for(i=0;i<256;i++)
-            out->values[i] = lut1->values[i];
-        break;
-    }
+    for(i=0;i<256;i++)
+        out->values[i] = lut2->values[lut1->values[i]];
 }
 
 void makeEmptyPicture(Picture* p, unsigned int width, unsigned int height){
@@ -547,10 +650,18 @@ void changeCurrentToBelowLayer(Picture* p){
     if(p->current->previous!=NULL){
         p->current = p->current->previous;
         p->currentID--;
-        if(p->current->previous==NULL)
-            copyLayer(&p->beforeCf,&p->blank);
-        else
-            blendTwoLayer(&p->beforeCf,p->current->element,1,1);
+        copyLayerInRect(&p->beforeCf,&p->blank, p->current->element->x,
+                                                p->current->element->y,
+                                                p->current->element->width,
+                                                p->current->element->height);
+        LayersList* l = p->layers.next;
+        int i=1;
+        for(;i<p->currentID;i++,l=l->next){
+            blendTwoLayerInRect(&p->beforeCf,l->element,0,1,p->current->element->x,
+                                                            p->current->element->y,
+                                                            p->current->element->width,
+                                                            p->current->element->height);
+        }
     }
 }
 

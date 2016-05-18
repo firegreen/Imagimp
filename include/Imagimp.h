@@ -28,9 +28,10 @@ typedef enum { FLAGS_YES=1,FLAGS_NO=2,FLAGS_OK=4,
                 FLAGS_CANCEL=8, FLAGS_PROMPT=16, FLAGS_SLIDER=32} DIALOGFLAGS;
 
 struct {
-    Button buttons[MAIN_NBBUTTONS];
-    Button* pressedButton;
-    Button* hoveredButton;
+    Component buttons[MAIN_NBBUTTONS];
+    Component* pressedButton;
+    Component* hoveredButton;
+    ComponentsList* components;
     unsigned char* image_base;
     unsigned char mouseButtonPressed;
     unsigned char dialogMode;
@@ -44,8 +45,9 @@ struct {
     char* text;
     String input;
     unsigned char prompt;
-    Button buttons[DIALOG_NBBUTTONS];
-    Slider slider;
+    Component buttons[DIALOG_NBBUTTONS];
+    Component slider;
+    ComponentsList* components;
     Bounds bounds;
     float xText, yText;
     float xBtn, yBtn;

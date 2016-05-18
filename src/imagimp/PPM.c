@@ -13,7 +13,6 @@ unsigned char *readPPM(const char *nom_fichier, unsigned int *width, unsigned in
         return NULL;
     }
 
-    char car;
     unsigned variante, valeur_max;
     unsigned etape=0;
     char* buffer = malloc(sizeof(char)*BUFSIZ);
