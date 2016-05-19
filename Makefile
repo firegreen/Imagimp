@@ -20,8 +20,8 @@ endif
 .PHONY: all clean mrproper re dirs
 
 CC = gcc
-CFLAGS = -Wall -Iinclude -g -O2
-LDLIBS = -fPIC -Llib -lglimagimp -lm
+CFLAGS = -Wall -Iinclude -g -O2 -fPIC
+LDLIBS = -Llib -lglimagimp -lm
 EXE = bin/imagimp$
 
 ifeq ($(OS),windows)
@@ -38,7 +38,7 @@ else
 	DLL_EXTENSION=.so
 	LIBGL=-lGL -lGLU -lglut
 	CLEANCMD = rm -rf obj lib
-	COPYCMD = cp
+	COPYCMD = cp -r
 endif
 
 LIBGLIMAGIMP = lib/$(DLL_PREFIX)glimagimp$(DLL_EXTENSION)
