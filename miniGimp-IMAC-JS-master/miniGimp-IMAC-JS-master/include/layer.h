@@ -2,7 +2,7 @@
 #include "outils.h"
 
 typedef enum EFFECT {CONTRASTPLUS, CONTRASTMINUS, MULTIPLE, NBEFFECTS} Effect;
-typedef enum BLENDMODE { BLEND_ADD=0, BLEND_MOY, BLEND_MULT, BLEND_SUB, BLEND_DIV, NBBLEND } BlendMode;
+typedef enum BLENDMODE { BLEND_ADD, BLEND_MOY, BLEND_MULT, BLEND_SUB, BLEND_DIV } BlendMode;
 #define DEFAULTBLEND BLEND_MULT
 
 typedef struct Layer Layer;
@@ -63,7 +63,6 @@ void makeLayer(Layer* l, const unsigned char* rgb, unsigned int width, unsigned 
 void makeEmptyLayer(Layer* l, unsigned int width, unsigned int height,
                     int x, int y);
 void copyLayer(Layer* l, const Layer* layerToCopy);
-void setBlendMode(Layer* l, BlendMode mode);
 void copyLayerInRect(Layer* l, const Layer* layerToCopy, int x, int y, int width, int height);
 Bounds layerBoundsInWindow(const Layer *l, unsigned int screen_width, unsigned int screen_height);
 void freeLayer(Layer** l);
@@ -75,9 +74,9 @@ void makeGrayHistogrammeFromLayer(Histogramme* histogramme, const Layer *layer);
 void drawHistorgramme(const Histogramme* histogramme, HistogrammeType type, const Bounds *b);
 void updateHistogramme(Layer* l);
 
-void makeLUT(LUT* lut, Effect e, float effectAmount);
+void makeLUT(LUT* lut, Effect e, float effectAmout);
 void combineLUT(LUT* out, LUT* lut1, LUT* lut2);
-//void makeLUT(LUT* lut, EFFECT e, float effectAmount);
+//void makeLUT(LUT* lut, EFFECT e, float effectAmout);
 
 DECLARER_DLISTE(LayersList, Layer)
 

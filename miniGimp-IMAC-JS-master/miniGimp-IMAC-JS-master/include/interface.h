@@ -176,12 +176,10 @@ typedef struct ComponentsList{
     struct ComponentsList* next;
 } ComponentsList;
 
-extern ComponentsList* makeComponentsList(Component* c);
+ComponentsList* makeComponentsList(Component* c);
 extern void addComponent(Component* c, ComponentsList **list);
-extern void removeFirstComponent(ComponentsList **list);
-extern Component* findComponentInList(float x, float y, ComponentsList* list);
-extern Component* findComponentInArray(float x, float y, Component *components, int nbComponents);
-extern void drawAllComponents(const ComponentsList *list);
+Component* findComponentInList(float x, float y, ComponentsList* list);
+Component* findComponentInArray(float x, float y, Component *components, int nbComponents);
 
 typedef enum { BUTTON, RADIOBUTTON, SLIDER } ComponentType;
 
@@ -197,7 +195,7 @@ typedef struct Component {
     int inactiv;
     union {
         struct { char* label; } Button;
-        struct { char* label; ComponentsList* othersRadioButton; char isSelected;} RadioButton;
+        struct { char* label; ComponentsList* othersRadioButton; } RadioButton;
         struct { Bounds cursorBounds; float value; } Slider;
     } extends;
 } Component;
@@ -214,11 +212,10 @@ extern void setComponentInactiv(Component* c, int inactiv);
 extern Component makeButton(char* label, Bounds bounds,Color fore, Color back,
                   void (*clickHandle)(const void*));
 extern void setButtonLabel(Component *c, char* label);
-extern void selectRadioButton(Component *b);
 
 extern Component makeRadioButton(char* label, Bounds bounds,Color fore, Color back,
                                 void (*clickHandle)(const void*));
-extern void addButtonToRadioButtonList(Component *radioButton1, Component *radioButton2);
+extern void addButtonToRadioButtonList(Component* radioButton1, Component* radioButton2);
 
 
 extern Component makeSlider(Bounds bounds, Color fore, Color back, void (*setHandle)(const void*));

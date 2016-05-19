@@ -22,14 +22,13 @@ char* convertString(String s);
 void freeString(String s);
 
 typedef enum { BTN_QUIT=0, BTN_SAVE, BTN_LOAD, BTN_OPACITY,
-                BTN_DISPLAYMODE, BTN_DELETELAYER, BTN_BLENDMODE, MAIN_NBBUTTONS } MAINBTNS;
+                BTN_DISPLAYMODE, BTN_DELETELAYER, MAIN_NBBUTTONS } MAINBTNS;
 typedef enum { BTN_YES=0, BTN_NO, BTN_OK, BTN_CANCEL, DIALOG_NBBUTTONS} DIALOGBTNS;
 typedef enum { FLAGS_YES=1,FLAGS_NO=2,FLAGS_OK=4,
                 FLAGS_CANCEL=8, FLAGS_PROMPT=16, FLAGS_SLIDER=32, FLAGS_RADIOBUTTON=64} DIALOGFLAGS;
 
 struct {
-    Component mainButtons[MAIN_NBBUTTONS];
-    Component blendButtons[NBBLEND];
+    Component buttons[MAIN_NBBUTTONS];
     Component* pressedButton;
     Component* hoveredButton;
     ComponentsList* components;
@@ -51,7 +50,6 @@ struct {
     Component slider;
     ComponentsList* components;
     ComponentsList* radioButtons;
-    unsigned int nbRadioButtons;
     Bounds bounds;
     float xText, yText;
     float xBtn, yBtn;
@@ -77,10 +75,9 @@ void Imagimp_setOpacityToCurrentLayer(float opacity);
 void openOpacityDialog();
 void openPPMImportDialog();
 void openPPMExportDialog();
-void openBlendDialog();
-void addRadioButtonInDialog(Component *radioButton);
 
 void activeDialog(const char* text, int flag, void (*closeHandle)(DIALOGBTNS));
+void addRadioButtonInDialog(Component* RadioButton);
 void desactiveDialog();
 void Dialog_draw();
 #endif /* IMAGIMP_H */

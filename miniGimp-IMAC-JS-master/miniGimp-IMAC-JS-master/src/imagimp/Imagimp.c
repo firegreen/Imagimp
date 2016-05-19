@@ -15,7 +15,6 @@ const Color IMAGIMPFORE = {0.3,0.6,0.4,1};
 const Color TRANSLUCIDE = {0.,0.,0.,0.};
 const Color WHITE = {1,1,1,1};
 float initial_opacity;
-int initial_Blend;
 char inputStr[256];
 
 void Imagimp_quit(){
@@ -46,7 +45,7 @@ void openOpacityDialog(){
     initial_opacity = Imagimp.picture.current->element->opacity;
     Dialog.slider.clickHandle = opacitySliderHandle;
     setSliderValue(&Dialog.slider,Imagimp.picture.current->element->opacity);
-    activeDialog("Opacite",FLAGS_SLIDER | FLAGS_CANCEL | FLAGS_OK, handleOpacityDialog);
+    activeDialog("Opacité",FLAGS_SLIDER | FLAGS_CANCEL | FLAGS_OK, handleOpacityDialog);
 }
 
 void Imagimp_refresh(int pixelsize){
@@ -65,13 +64,13 @@ void Imagimp_switchDisplay(){
         Imagimp.displayMode = 0;
         actualiseImage(Imagimp.picture.current->element->rgb,
                        Imagimp.picture.current->element->width,Imagimp.picture.current->element->height);
-        setButtonLabel(Imagimp.mainButtons + BTN_DISPLAYMODE,"Affiche Rendu");
+        setButtonLabel(Imagimp.buttons + BTN_DISPLAYMODE,"Affiche Rendu");
     }
     else{
         Imagimp.displayMode = 1;
         updateCfLayer(&Imagimp.picture,1);
         actualiseImage(Imagimp.picture.Cf.rgb, Imagimp.picture.Cf.width,Imagimp.picture.Cf.height);
-        setButtonLabel(Imagimp.mainButtons + BTN_DISPLAYMODE,"Affiche Calque Original");
+        setButtonLabel(Imagimp.buttons + BTN_DISPLAYMODE,"Affiche Calque Original");
     }
 }
 
@@ -86,7 +85,7 @@ void handlePPMImportDialog(DIALOGBTNS answer){
             return;
         }
         addNewLayer(&Imagimp.picture,rgb,width,height);
-        setComponentInactiv(Imagimp.mainButtons + BTN_DELETELAYER,0);
+        setComponentInactiv(Imagimp.buttons + BTN_DELETELAYER,0);
         Imagimp_refresh(1);
         break;
     default:
@@ -119,32 +118,6 @@ void handleLayerDeletingAskDialog(DIALOGBTNS answer){
     }
 }
 
-void handleBlendModeDialogButton(){
-    int blendMode = NBBLEND-1;
-    ComponentsList* buttons = Dialog.radioButtons;
-    while(buttons!=NULL){
-        if(buttons->componenent->extends.RadioButton.isSelected){
-            setBlendMode(Imagimp.picture.current->element,blendMode);
-            Imagimp_refresh(1);
-            return;
-        }
-        else{
-            blendMode--;
-            buttons = buttons->next;
-        }
-    }
-}
-
-void handleBlendModeDialog(DIALOGBTNS answer){
-    switch (answer) {
-    case BTN_CANCEL:
-        setBlendMode(Imagimp.picture.layers.element,initial_Blend);
-        break;
-    default:
-        break;
-    }
-}
-
 void openPPMImportDialog(){
     activeDialog("Importer un fichier PPM \n Saississez le nom du fichier:",
                  FLAGS_PROMPT | FLAGS_CANCEL | FLAGS_OK, handlePPMImportDialog);
@@ -153,20 +126,6 @@ void openPPMImportDialog(){
 void openPPMExportDialog(){
     activeDialog("Exporter un fichier PPM \n Saississez le nom du fichier:",
                  FLAGS_PROMPT | FLAGS_CANCEL | FLAGS_OK, handlePPMExportDialog);
-}
-
-void openBlendDialog(){
-    activeDialog("Modifier le mode de melange:",
-                 FLAGS_RADIOBUTTON | FLAGS_CANCEL | FLAGS_OK, handleBlendModeDialog);
-    int i;
-    for(i=0;i<NBBLEND;i++){
-        addRadioButtonInDialog(Imagimp.blendButtons + i);
-        if(i==Imagimp.picture.current->element->blendMode)
-        {
-            selectRadioButton(Imagimp.blendButtons+i);
-            initial_Blend = i;
-        }
-    }
 }
 
 void Imagimp_addEmptyLayer(){
@@ -184,7 +143,7 @@ void Imagimp_removeCurrentLayer(){
     {
         removeCurrentLayer(&Imagimp.picture);
         if(Imagimp.picture.current->previous==NULL)
-            setComponentInactiv(Imagimp.mainButtons + BTN_DELETELAYER,1);
+            setComponentInactiv(Imagimp.buttons + BTN_DELETELAYER,1);
         Imagimp_refresh(1);
     }
     else
@@ -217,18 +176,17 @@ void initDialog(){
                                           Dialog.bounds.width-0.2,Dialog.bounds.y/5),
                                DIALOGFORE,DIALOGBACK,NULL);
     Dialog.input = makeString();
-    Dialog.promptBounds = makeBounds(Dialog.bounds.x + 0.05,Dialog.bounds.y2-0.2,Dialog.bounds.width-0.1,0.08);
-    Dialog.xBtn = Dialog.bounds.x2-0.15;
-    Dialog.yBtn = Dialog.bounds.y+0.025;
-    Dialog.xText = Dialog.promptBounds.x;
-    Dialog.yText = Dialog.promptBounds.y2+0.07;
+    Dialog.promptBounds = makeBounds(0.3,0.45,0.4,0.1);
+    Dialog.xBtn = 0.6;
+    Dialog.yBtn = 0.375;
+    Dialog.xText = 0.3;
+    Dialog.yText = 0.6;
     Dialog.components = makeComponentsList(Dialog.buttons);
     int i;
     for(i=1;i<DIALOG_NBBUTTONS;i++)
     {
         addComponent(Dialog.buttons+i,&Dialog.components);
     }
-    addComponent(&Dialog.slider,&Dialog.components);
     Dialog.radioButtons = NULL;
     desactiveDialog();
 }
@@ -338,39 +296,22 @@ void Imagimp_launch(int argc, char *argv[]) {
     float startX = getUIStartX() + 0.001;
     float btnsizeX = 0.199f;
     float btnsizeY = 0.04f;
-    Imagimp.mainButtons[BTN_QUIT] = makeButton("Quitter",makeBounds(startX,0.15f,btnsizeX,btnsizeY),
+    Imagimp.buttons[BTN_QUIT] = makeButton("Quitter",makeBounds(startX,0.15f,btnsizeX,btnsizeY),
                                            IMAGIMPFORE,IMAGIMPBACK,Imagimp_quit);
-    Imagimp.mainButtons[BTN_SAVE] = makeButton("Sauvegarder...",makeBounds(startX,0.2f,btnsizeX,btnsizeY),
+    Imagimp.buttons[BTN_SAVE] = makeButton("Sauvegarder",makeBounds(startX,0.2f,btnsizeX,btnsizeY),
                                            IMAGIMPFORE,IMAGIMPBACK,openPPMExportDialog);
-    Imagimp.mainButtons[BTN_LOAD] = makeButton("Charger...",makeBounds(startX,0.8f,btnsizeX,btnsizeY),
+    Imagimp.buttons[BTN_LOAD] = makeButton("Charger",makeBounds(startX,0.8f,btnsizeX,btnsizeY),
                                            IMAGIMPFORE,IMAGIMPBACK,openPPMImportDialog);
-    Imagimp.mainButtons[BTN_OPACITY] = makeButton("Changer Opacite...",makeBounds(startX,0.75f,btnsizeX,btnsizeY),
+    Imagimp.buttons[BTN_OPACITY] = makeButton("Changer Opacite",makeBounds(startX,0.75f,btnsizeX,btnsizeY),
                                               IMAGIMPFORE,IMAGIMPBACK,openOpacityDialog);
-    Imagimp.mainButtons[BTN_BLENDMODE] = makeButton("Melange Calque Courant...",makeBounds(startX,0.7f,btnsizeX,btnsizeY),
-                                                  IMAGIMPFORE,IMAGIMPBACK,openBlendDialog);
-    Imagimp.mainButtons[BTN_DISPLAYMODE] = makeButton("Afficher Calque Original",makeBounds(startX,0.6f,btnsizeX,btnsizeY),
+    Imagimp.buttons[BTN_DISPLAYMODE] = makeButton("Afficher Calque Original",makeBounds(startX,0.7f,btnsizeX,btnsizeY),
                                                   IMAGIMPFORE,IMAGIMPBACK,Imagimp_switchDisplay);
-    Imagimp.mainButtons[BTN_DELETELAYER] = makeButton("Supprimer Calque Courant",makeBounds(startX,0.55f,btnsizeX,btnsizeY),
+    Imagimp.buttons[BTN_DELETELAYER] = makeButton("Supprimer Calque Courant",makeBounds(startX,0.65f,btnsizeX,btnsizeY),
                                                   IMAGIMPFORE,IMAGIMPBACK,openLayerDeletingAskDialog);
-
-    btnsizeX = 0.08f;
-    btnsizeY = 0.05f;
-    Imagimp.blendButtons[BLEND_ADD] = makeRadioButton("Addition",makeBounds(0,0,btnsizeX,btnsizeY),
-                                           IMAGIMPFORE,IMAGIMPBACK,handleBlendModeDialogButton);
-    Imagimp.blendButtons[BLEND_DIV] = makeRadioButton("Division",makeBounds(0,0,btnsizeX,btnsizeY),
-                                           IMAGIMPFORE,IMAGIMPBACK,handleBlendModeDialogButton);
-    Imagimp.blendButtons[BLEND_MOY] = makeRadioButton("Moyenne",makeBounds(0,0,btnsizeX,btnsizeY),
-                                           IMAGIMPFORE,IMAGIMPBACK,handleBlendModeDialogButton);
-    Imagimp.blendButtons[BLEND_MULT] = makeRadioButton("Produit",makeBounds(0,0,btnsizeX,btnsizeY),
-                                              IMAGIMPFORE,IMAGIMPBACK,handleBlendModeDialogButton);
-    Imagimp.blendButtons[BLEND_SUB] = makeRadioButton("Difference",makeBounds(0,0,btnsizeX,btnsizeY),
-                                                  IMAGIMPFORE,IMAGIMPBACK,handleBlendModeDialogButton);
-
-
-    Imagimp.components = makeComponentsList(Imagimp.mainButtons);
+    Imagimp.components = makeComponentsList(Imagimp.buttons);
     for(i=1;i<MAIN_NBBUTTONS;i++)
     {
-        addComponent(Imagimp.mainButtons+i,&Imagimp.components);
+        addComponent(Imagimp.buttons+i,&Imagimp.components);
     }
     initDialog();
     launchApp();
@@ -478,9 +419,9 @@ void Imagimp_handleKeyboard(unsigned char ascii, int x, int y, char CTRL, char A
                 changeCurrentToBelowLayer(&Imagimp.picture);
             }
             if(Imagimp.picture.current->previous==NULL)
-                setComponentInactiv(Imagimp.mainButtons + BTN_DELETELAYER,1);
+                setComponentInactiv(Imagimp.buttons + BTN_DELETELAYER,1);
             else
-                setComponentInactiv(Imagimp.mainButtons + BTN_DELETELAYER,0);
+                setComponentInactiv(Imagimp.buttons + BTN_DELETELAYER,0);
             Imagimp_refresh(1);
         }
         else{
@@ -491,9 +432,9 @@ void Imagimp_handleKeyboard(unsigned char ascii, int x, int y, char CTRL, char A
                 changeCurrentToAboveLayer(&Imagimp.picture);
             }
             if(Imagimp.picture.current->previous==NULL)
-                setComponentInactiv(Imagimp.mainButtons + BTN_DELETELAYER,1);
+                setComponentInactiv(Imagimp.buttons + BTN_DELETELAYER,1);
             else
-                setComponentInactiv(Imagimp.mainButtons + BTN_DELETELAYER,0);
+                setComponentInactiv(Imagimp.buttons + BTN_DELETELAYER,0);
             Imagimp_refresh(1);
         }
         break;
@@ -635,11 +576,11 @@ void Imagimp_handleMouseMotion(float xGL, float yGL, float deltaX, float deltaY,
     }
     else if(Imagimp.dragLayer){
         translateCurrentLayer(&Imagimp.picture,deltaX * screenWidth(), -deltaY * screenHeight());
-        Imagimp_refresh(4);
+        Imagimp_refresh(3);
         return;
     }
     else if(Imagimp.dialogMode){
-        b = findComponentInList(xGL,yGL,Dialog.components);
+        b = findComponentInArray(xGL,yGL,Dialog.buttons,DIALOG_NBBUTTONS);
         if(!Dialog.slider.invisible){
             unsigned char sliderHover = isInBounds(xGL,yGL,&Dialog.slider.extends.Slider.cursorBounds);
             if(sliderHover){
@@ -664,7 +605,7 @@ void Imagimp_handleMouseMotion(float xGL, float yGL, float deltaX, float deltaY,
         }
     }
     else{
-        b = findComponentInList(xGL,yGL,Imagimp.components);
+        b = findComponentInArray(xGL,yGL,Imagimp.buttons,MAIN_NBBUTTONS);
     }
 
     if(Imagimp.hoveredButton!=b && Imagimp.hoveredButton!=NULL){
@@ -718,9 +659,10 @@ void Dialog_draw(){
     else if(Dialog.choice){
         ComponentsList* buttons = Dialog.radioButtons;
         while(buttons!=NULL){
-            drawComponent(buttons->componenent);
-            buttons = buttons->next;
+            addButtonToRadioButtonList(buttons->componenent,radioButton);
+            otherButton = otherButton->next;
         }
+
     }
 }
 
@@ -753,23 +695,7 @@ void activeDialog(const char *text, int flag, void (*closeHandle)(DIALOGBTNS)){
             Dialog.buttons[i].bounds.y2 = y + Dialog.buttons[i].bounds.height;
             x -= 0.10;
         }
-        else{
-            Dialog.buttons[i].bounds.x = -1;
-            Dialog.buttons[i].bounds.x2 =-1;
-            Dialog.buttons[i].bounds.y = -1;
-            Dialog.buttons[i].bounds.y2 = -1;
-        }
     }
-    glutPostRedisplay();
-}
-
-void desactiveDialog(){
-    Imagimp.dialogMode = 0;
-    Dialog.prompt = 0;
-    Dialog.choice = 0;
-    Dialog.radioButtons = NULL;
-    Dialog.nbRadioButtons = 0;
-    Dialog.slider.invisible = 1;
     glutPostRedisplay();
 }
 
@@ -780,17 +706,20 @@ void addRadioButtonInDialog(Component *radioButton){
         otherButton = otherButton->next;
     }
     addComponent(radioButton,&Dialog.radioButtons);
-    addComponent(radioButton,&Dialog.components);
-    radioButton->bounds = makeBounds(Dialog.bounds.x +0.03+ 0.085*(Dialog.nbRadioButtons%5),
-                                     Dialog.promptBounds.y2 - (Dialog.nbRadioButtons/5)*0.08,
-                                     radioButton->bounds.width,radioButton->bounds.height);
-    Dialog.nbRadioButtons++;
+}
+
+void desactiveDialog(){
+    Imagimp.dialogMode = 0;
+    Dialog.prompt = 0;
+    Dialog.radioButtons = 0;
+    Dialog.slider.inactiv = 1;
+    glutPostRedisplay();
 }
 
 void Imagimp_draw() {
     int i;
     for(i=0;i<MAIN_NBBUTTONS;i++)
-        drawComponent(Imagimp.mainButtons+i);
+        drawComponent(Imagimp.buttons+i);
     if(Imagimp.dialogMode){
         Dialog_draw();
     }

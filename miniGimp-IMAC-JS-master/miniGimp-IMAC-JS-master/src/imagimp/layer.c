@@ -215,11 +215,6 @@ void makeGrayHistogrammeFromLayer(Histogramme *histogramme, const Layer *layer){
             histogramme->min = histogramme->nbPixelsPerValues[i];
     }
 }
-
-void setBlendMode(Layer *l, BlendMode mode){
-    l->blendMode = mode;
-}
-
 void makeRedHistogrammeFromLayer(Histogramme *histogramme, const Layer *layer){
     unsigned int i;
     memset(histogramme, 0, sizeof(Histogramme));
@@ -386,24 +381,23 @@ void blendTwoLayer(Layer *lBelow, const Layer *lAbove, int inverseAction, int pi
     }
 
 
-    unsigned int i,j;
-    unsigned char p;
+    unsigned i,j;
     while(endLine<=(yEndB-pixelsize)*lbelowPpW){
         while(ibelow<endLine){
             for(cpt=0;cpt<3;cpt++){
-                p =(*blendFunc)(lBelow->rgb[ibelow+cpt],lBelow->opacity,
+                unsigned char p =(*blendFunc)(lBelow->rgb[ibelow+cpt],lBelow->opacity,
                                               lAbove->rgb[iabove+cpt],lAbove->opacity,
                                               parameters);
                 for(i=ibelow+cpt;i<ibelow+offsetX;i+=3)
                     for(j=i;j<i+offsetY;j+=lbelowPpW)
                         lBelow->rgb[j] = p;
+
             }
             iabove +=offsetX;
             ibelow +=offsetX;
         }
-
         while(ibelow<endLine+offsetX){
-            lBelow->rgb[ibelow] = (*blendFunc)(lBelow->rgb[ibelow],lBelow->opacity,
+                lBelow->rgb[ibelow] = (*blendFunc)(lBelow->rgb[ibelow],lBelow->opacity,
                                                    lAbove->rgb[iabove],lAbove->opacity,
                                                    parameters);
             iabove ++;
@@ -414,14 +408,6 @@ void blendTwoLayer(Layer *lBelow, const Layer *lAbove, int inverseAction, int pi
         ibelow  += lineIncB;
         endLine += offsetY;
     }
-    /*while(ibelow<yEndB*lbelowPpW){
-        lBelow->rgb[ibelow] = (*blendFunc)(lBelow->rgb[ibelow],lBelow->opacity,
-                                               lAbove->rgb[iabove],lAbove->opacity,
-                                               parameters);
-        iabove ++;
-        ibelow ++;
-    }*/
-
 }
 
 void blendTwoLayerInRect(Layer *lBelow, const Layer *lAbove, int inverseAction, int pixelsize, int x, int y, int width, int height)
@@ -540,38 +526,17 @@ void makeLUT(LUT* lut, Effect e, float amount){
         lut->values[127] = 127;
         lut->values[255] = 255;
         for(i=1;i<127;i++)
-            lut->values[i] = max(0,i-126*amount);
+            lut->values[i] = max(0,(i-126*amount));
         for(i=128;i<255;i++)
-            lut->values[i] = min(255,i+126*amount);
+            lut->values[i] = min(255,(i+126*amount));
         break;
     case CONTRASTMINUS:
         lut->values[127] = 127;
         for(i=0;i<127;i++)
-            lut->values[i] = min(127,i+126*amount);
+            lut->values[i] = min(127,(i+126*amount));
         for(i=128;i<256;i++)
-            lut->values[i] = max(127,i-126*amount);
+            lut->values[i] = max(127,(i-126*amount));
         break;
-
-    /*case BRIGHTNESSPLUS:
-        for(i=0;i<256;i++)
-        lut->values[i] = i+amount;
-        break;
-
-    case BRIGHTNESSMINUS:
-        for(i=0;i<256;i++)
-        lut->values[i] = i- amount;
-        break;
-
-    case SATURATIONPLUS:
-
-
-
-
-    case SATURATIONMINUS:*/
-
-
-
-
     default:
         for(i=0;i<256;i++)
             lut->values[i] = i;
@@ -701,7 +666,7 @@ void changeCurrentToBelowLayer(Picture* p){
 }
 
 Bounds layerBoundsInWindow(const Layer *l, unsigned int screen_width, unsigned int screen_height){
-    return makeBounds((float)l->x/(float)screen_width,(float)l->y/(float)screen_height,
+    return makeBounds((float)l->x/(float)screen_width,(-(float)l->y)/(float)screen_height,
                       (float)l->width/(float)screen_width,(float)l->height/(float)screen_height);
 }
 

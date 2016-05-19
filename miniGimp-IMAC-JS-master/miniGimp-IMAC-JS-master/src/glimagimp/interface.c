@@ -634,24 +634,15 @@ void releaseButton(Component *b, int activeAction){
 }
 
 void releaseRadioButton(Component *b, int activeAction){
-    selectRadioButton(b);
-    if(activeAction && b->extends.RadioButton.isSelected && !b->invisible && b->clickHandle!=NULL)
+    if(activeAction && !b->inactiv && !b->invisible && b->clickHandle!=NULL)
         (*b->clickHandle)(NULL);
-}
-
-void selectRadioButton(Component *b){
-    if(!b->inactiv){
-        b->inactiv = 1;
-        b->extends.RadioButton.isSelected = 1;
-        ComponentsList* l = b->extends.RadioButton.othersRadioButton;
-        while(l!=NULL){
-            l->componenent->inactiv = 0;
-            l->componenent->extends.RadioButton.isSelected = 0;
-            l = l->next;
-        }
+    b->inactiv = 0;
+    ComponentsList* l = b->extends.RadioButton.othersRadioButton;
+    while(l!=NULL){
+        l->componenent->inactiv = 1;
+        l = l->next;
     }
 }
-
 
 void hoverButton(Component *b){
 }
@@ -663,14 +654,6 @@ void setButtonLabel(Component *b, char* label){
     free(b->extends.Button.label);
     b->extends.Button.label = malloc(sizeof(char)*strlen(label)+1);
     strcpy(b->extends.Button.label,label);
-}
-
-Component makeRadioButton(char *label, Bounds bounds, Color fore, Color back, void (*clickHandle)(const void *)){
-    Component c = makeButton(label,bounds,fore,back,clickHandle);
-    c.type = RADIOBUTTON;
-    c.extends.RadioButton.isSelected = 0;
-    c.extends.RadioButton.othersRadioButton = NULL;
-    return c;
 }
 
 void addButtonToRadioButtonList(Component *radioButton1, Component *radioButton2){
@@ -793,11 +776,6 @@ void addComponent(Component *b, ComponentsList **list){
     (*list)->next = temp;
 }
 
-void removeFirstComponent(ComponentsList **list){
-    ComponentsList* temp = (*list)->next;
-    free(*list);
-    *list = temp;
-}
 
 Component* findComponentInList(float x, float y, ComponentsList *list){
     ComponentsList* pointer;
@@ -815,13 +793,6 @@ Component* findComponentInArray(float x, float y, Component* buttons, int nbbutt
             return buttons+i;
     }
     return NULL;
-}
-
-void drawAllComponents(const ComponentsList* list){
-    const ComponentsList* pointer;
-    for(pointer = list; pointer!=NULL;pointer=pointer->next){
-        drawComponent(pointer->componenent);
-    }
 }
 
 void drawComponent(const Component* c){
