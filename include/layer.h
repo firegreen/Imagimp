@@ -74,9 +74,9 @@ void makeGrayHistogrammeFromLayer(Histogramme* histogramme, const Layer *layer);
 void drawHistorgramme(const Histogramme* histogramme, HistogrammeType type, const Bounds *b);
 void updateHistogramme(Layer* l);
 
-void makeLUT(LUT* lut, Effect e, float effectAmout);
+void makeLUT(LUT* lut, Effect e, float effectAmount);
 void combineLUT(LUT* out, LUT* lut1, LUT* lut2);
-//void makeLUT(LUT* lut, EFFECT e, float effectAmout);
+//void makeLUT(LUT* lut, EFFECT e, float effectAmount);
 
 DECLARER_DLISTE(LayersList, Layer)
 

@@ -72,13 +72,13 @@
 1461340998 c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\include\ppm.h
 	<stdbool.h>
 
-1463524315 source:c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\src\imagimp\layer.c
+1463681901 source:c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\src\imagimp\layer.c
 	<string.h>
 	<math.h>
 	"layer.h"
 	"outils.h"
 
-1463502417 c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\include\layer.h
+1463681887 c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\include\layer.h
 	"dliste.h"
 	"outils.h"
 	"pile.h"

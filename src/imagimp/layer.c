@@ -537,6 +537,27 @@ void makeLUT(LUT* lut, Effect e, float amount){
         for(i=128;i<256;i++)
             lut->values[i] = max(127,i-126*amount);
         break;
+
+    /*case BRIGHTNESSPLUS:
+        for(i=0;i<256;i++)
+        lut->values[i] = i+amount;
+        break;
+
+    case BRIGHTNESSMINUS:
+        for(i=0;i<256;i++)
+        lut->values[i] = i- amount;
+        break;
+
+    case SATURATIONPLUS:
+
+
+
+
+    case SATURATIONMINUS:*/
+
+
+
+
     default:
         for(i=0;i<256;i++)
             lut->values[i] = i;

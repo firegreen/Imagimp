@@ -665,6 +665,12 @@ void activeDialog(const char *text, int flag, void (*closeHandle)(DIALOGBTNS)){
             Dialog.buttons[i].bounds.y2 = y + Dialog.buttons[i].bounds.height;
             x -= 0.10;
         }
+        else{
+            Dialog.buttons[i].bounds.x = -1;
+            Dialog.buttons[i].bounds.x2 =-1;
+            Dialog.buttons[i].bounds.y = -1;
+            Dialog.buttons[i].bounds.y2 = -1;
+        }
     }
     glutPostRedisplay();
 }
