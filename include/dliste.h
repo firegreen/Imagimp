@@ -14,7 +14,8 @@ typedef struct Liste { \
 Liste *make_ ## Liste (Element* e);\
 bool Liste##_insertBefore(Liste *l, Element *elt);\
 bool Liste##_insertAfter(Liste *l, Element *elt);\
-void Liste##_remove(Liste *l);
+void Liste##_remove(Liste *l);\
+void Liste##_removeAll(Liste *l);\
 
 
 #define IMPLEMENTE_DLISTE(Liste, Element) \
@@ -55,6 +56,12 @@ void Liste##_remove(Liste *l) { \
     if(l->next) \
         l->next->previous = l->previous; \
     free(l); \
+}\
+void Liste##_removeAll(Liste *l) { \
+	if(l->next!=NULL) \
+		Liste##_removeAll(l->next); \
+	l->previous->next = NULL; \
+	free(l); \
 }
 
 #endif /* DLISTE_H */

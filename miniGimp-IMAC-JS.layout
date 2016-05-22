@@ -2,49 +2,19 @@
 <CodeBlocks_layout_file>
 	<FileVersion major="1" minor="0" />
 	<ActiveTarget name="Debug" />
-	<File name="include\dliste.h" open="1" top="0" tabpos="8" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
-		<Cursor>
-			<Cursor1 position="0" topLine="29" />
-		</Cursor>
-	</File>
-	<File name="include\PPM.h" open="1" top="0" tabpos="9" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
-		<Cursor>
-			<Cursor1 position="256" topLine="0" />
-		</Cursor>
-	</File>
-	<File name="src\glimagimp\interface.c" open="1" top="1" tabpos="1" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
-		<Cursor>
-			<Cursor1 position="25844" topLine="877" />
-		</Cursor>
-	</File>
 	<File name="src\glimagimp\outils.c" open="1" top="0" tabpos="4" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
 			<Cursor1 position="1966" topLine="12" />
 		</Cursor>
 	</File>
-	<File name="src\imagimp\Imagimp.c" open="1" top="0" tabpos="5" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+	<File name="src\glimagimp\interface.c" open="1" top="0" tabpos="1" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="21116" topLine="541" />
+			<Cursor1 position="25844" topLine="877" />
 		</Cursor>
 	</File>
-	<File name="src\imagimp\PPM.c" open="1" top="0" tabpos="10" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+	<File name="src\imagimp\layer.c" open="1" top="1" tabpos="6" split="0" active="1" splitpos="0" zoom_1="1" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="1004" topLine="0" />
-		</Cursor>
-	</File>
-	<File name="src\imagimp\layer.c" open="1" top="0" tabpos="6" split="0" active="1" splitpos="0" zoom_1="1" zoom_2="0">
-		<Cursor>
-			<Cursor1 position="4735" topLine="103" />
-		</Cursor>
-	</File>
-	<File name="include\interface.h" open="1" top="0" tabpos="2" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
-		<Cursor>
-			<Cursor1 position="2635" topLine="52" />
-		</Cursor>
-	</File>
-	<File name="src\imagimp\main.c" open="1" top="0" tabpos="3" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
-		<Cursor>
-			<Cursor1 position="110" topLine="0" />
+			<Cursor1 position="16471" topLine="433" />
 		</Cursor>
 	</File>
 	<File name="include\outils.h" open="1" top="0" tabpos="7" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
@@ -52,5 +22,35 @@
 			<Cursor1 position="1988" topLine="58" />
 		</Cursor>
 	</File>
-	<EditorTabsLayout layout="0856bd80573e35c000039f9600000002=*0;miniGimp-IMAC-JS:src\glimagimp\interface.c,1;miniGimp-IMAC-JS:include\interface.h,2;miniGimp-IMAC-JS:src\imagimp\main.c,3;miniGimp-IMAC-JS:src\glimagimp\outils.c,4;miniGimp-IMAC-JS:src\imagimp\Imagimp.c,5;miniGimp-IMAC-JS:src\imagimp\layer.c,6;miniGimp-IMAC-JS:include\outils.h,7;miniGimp-IMAC-JS:include\dliste.h,8;miniGimp-IMAC-JS:include\PPM.h,9;miniGimp-IMAC-JS:src\imagimp\PPM.c@layout2|name=dummy;caption=;state=2098174;dir=3;layer=0;row=0;pos=0;prop=100000;bestw=522;besth=236;minw=522;minh=236;maxw=-1;maxh=-1;floatx=-1;floaty=-1;floatw=-1;floath=-1|name=0856bd80573e35c000039f9600000002;caption=;state=2098172;dir=5;layer=0;row=0;pos=0;prop=100000;bestw=200;besth=200;minw=-1;minh=-1;maxw=-1;maxh=-1;floatx=-1;floaty=-1;floatw=-1;floath=-1|dock_size(5,0,0)=202|" />
+	<File name="include\interface.h" open="1" top="0" tabpos="2" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+		<Cursor>
+			<Cursor1 position="2635" topLine="52" />
+		</Cursor>
+	</File>
+	<File name="src\imagimp\PPM.c" open="1" top="0" tabpos="10" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+		<Cursor>
+			<Cursor1 position="1004" topLine="0" />
+		</Cursor>
+	</File>
+	<File name="include\dliste.h" open="1" top="0" tabpos="8" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+		<Cursor>
+			<Cursor1 position="0" topLine="29" />
+		</Cursor>
+	</File>
+	<File name="src\imagimp\main.c" open="1" top="0" tabpos="3" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+		<Cursor>
+			<Cursor1 position="110" topLine="0" />
+		</Cursor>
+	</File>
+	<File name="include\PPM.h" open="1" top="0" tabpos="9" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+		<Cursor>
+			<Cursor1 position="256" topLine="0" />
+		</Cursor>
+	</File>
+	<File name="src\imagimp\Imagimp.c" open="1" top="0" tabpos="5" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+		<Cursor>
+			<Cursor1 position="21116" topLine="525" />
+		</Cursor>
+	</File>
+	<EditorTabsLayout layout="080968d0573f253900006bf000000002=0;miniGimp-IMAC-JS:src\glimagimp\interface.c,1;miniGimp-IMAC-JS:include\interface.h,2;miniGimp-IMAC-JS:src\imagimp\main.c,3;miniGimp-IMAC-JS:src\glimagimp\outils.c,4;miniGimp-IMAC-JS:src\imagimp\Imagimp.c,*5;miniGimp-IMAC-JS:src\imagimp\layer.c,6;miniGimp-IMAC-JS:include\outils.h,7;miniGimp-IMAC-JS:include\dliste.h,8;miniGimp-IMAC-JS:include\PPM.h,9;miniGimp-IMAC-JS:src\imagimp\PPM.c@layout2|name=dummy;caption=;state=2098174;dir=3;layer=0;row=0;pos=0;prop=100000;bestw=424;besth=236;minw=424;minh=236;maxw=-1;maxh=-1;floatx=-1;floaty=-1;floatw=-1;floath=-1|name=080968d0573f253900006bf000000002;caption=;state=2098172;dir=5;layer=0;row=0;pos=0;prop=100000;bestw=200;besth=200;minw=-1;minh=-1;maxw=-1;maxh=-1;floatx=-1;floaty=-1;floatw=-1;floath=-1|dock_size(5,0,0)=202|" />
 </CodeBlocks_layout_file>

@@ -10,7 +10,7 @@
 #define histoGreen histogramme[GREEN_H]->nbPixelsPerValues
 #define histoGray histogramme[GRAYSCALE_H]->nbPixelsPerValues
 
-IMPLEMENTE_DLISTE(LUTsList, LUT)
+IMPLEMENTE_LISTE(LUTsList, LUT)
 IMPLEMENTE_DLISTE(LayersList, Layer)
 
 
@@ -138,46 +138,9 @@ void makeEmptyLayer(Layer* l, unsigned int width, unsigned int height, int x, in
     unsigned long size = height*width*3;
     if(l->rgb!=NULL) free(l->rgb);
     l->rgb = malloc(height*width*3);
-    int i,j,k;
-    int nbValuesPerWidth = width*3;
-    int block = nbValuesPerWidth*30;
-    /*for(i=0;i<size;i++)
-        l->rgb[i] = 255;*/
-    for(i=0;i<size;i += block){
-        if((i/nbValuesPerWidth)%4==0)
-            for(k=0;k<block/3;k++){
-                int pos = k*3;
-                for(j=0;j<3;j++)
-                {
-                   l->rgb[i+j+pos] = (255 - (40*(i%(5-j))));
-                }
-            }
-        else if((i/nbValuesPerWidth)%4==1)
-            for(k=0;k<block/3;k++){
-                int pos = k*3;
-                for(j=0;j<3;j++)
-                {
-                   l->rgb[i+j+pos] = (255 - (40*(i%(7-j))));
-                }
-            }
-        else if((i/nbValuesPerWidth)%4==2)
-            for(k=0;k<block/3;k++){
-                int pos = k*3;
-                for(j=0;j<3;j++)
-                {
-                   l->rgb[i+j+pos] = (255 - (40*(i%(9-j))));
-                }
-            }
-        else
-            for(k=0;k<block/3;k++){
-                int pos = k*3;
-                for(j=0;j<3;j++)
-                {
-                   l->rgb[i+j+pos] = (255 - (10*(i%(19-j))));
-                }
-            }
-
-    }
+	int i;
+	for(i=0;i<size;i++)
+		l->rgb[i] = 255;
     l->height = height;
     l->width = width;
     l->x = x;
@@ -385,6 +348,9 @@ void blendTwoLayer(Layer *lBelow, const Layer *lAbove, int inverseAction, int pi
         *((float*)parameters) =  lBelow->opacity+lAbove->opacity;
     }
 
+	LUT* finalLUT = malloc(sizeof(LUT));
+	combineAllLUT(finalLUT,lAbove->luts);
+
 
     unsigned int i,j;
     unsigned char p;
@@ -392,7 +358,7 @@ void blendTwoLayer(Layer *lBelow, const Layer *lAbove, int inverseAction, int pi
         while(ibelow<endLine){
             for(cpt=0;cpt<3;cpt++){
                 p =(*blendFunc)(lBelow->rgb[ibelow+cpt],lBelow->opacity,
-                                              lAbove->rgb[iabove+cpt],lAbove->opacity,
+											  finalLUT->values[lAbove->rgb[iabove+cpt]],lAbove->opacity,
                                               parameters);
                 for(i=ibelow+cpt;i<ibelow+offsetX;i+=3)
                     for(j=i;j<i+offsetY;j+=lbelowPpW)
@@ -421,6 +387,7 @@ void blendTwoLayer(Layer *lBelow, const Layer *lAbove, int inverseAction, int pi
         iabove ++;
         ibelow ++;
     }*/
+	free(finalLUT);
 
 }
 
@@ -431,6 +398,15 @@ void blendTwoLayerInRect(Layer *lBelow, const Layer *lAbove, int inverseAction, 
     unsigned int   xStartB, xStartA,
                     yStartB, yStartA,
                     xEndB, yEndB;
+	if(x < 0)
+		x = 0;
+	if(x+width>lBelow->width)
+		width = lBelow->width-x;
+	if(y<0)
+		y = 0;
+	if(y+height>lBelow->height)
+		height = lBelow->height-y;
+
     if(lAbove->x<0){
         xStartB = max(0,(x*3));
         xStartA = lAbove->x * -3+xStartB;
@@ -467,13 +443,15 @@ void blendTwoLayerInRect(Layer *lBelow, const Layer *lAbove, int inverseAction, 
         *((float*)parameters) =  lBelow->opacity+lAbove->opacity;
     }
 
+	LUT* finalLUT = malloc(sizeof(LUT));
+	combineAllLUT(finalLUT,lAbove->luts);
 
     unsigned i,j;
     while(endLine<=(yEndB-pixelsize)*lbelowPpW){
         while(ibelow<endLine){
             for(cpt=0;cpt<3;cpt++){
                 unsigned char p =(*blendFunc)(lBelow->rgb[ibelow+cpt],lBelow->opacity,
-                                              lAbove->rgb[iabove+cpt],lAbove->opacity,
+											  finalLUT->values[lAbove->rgb[iabove+cpt]],lAbove->opacity,
                                               parameters);
                 for(i=ibelow+cpt;i<ibelow+offsetX;i+=3)
                     for(j=i;j<i+offsetY;j+=lbelowPpW)
@@ -495,6 +473,7 @@ void blendTwoLayerInRect(Layer *lBelow, const Layer *lAbove, int inverseAction, 
         ibelow  += lineIncB;
         endLine += offsetY;
     }
+	free(finalLUT);
 }
 
 unsigned char addBlend(unsigned char pixelBelow, float opacityBelow,
@@ -530,61 +509,76 @@ unsigned char divBlend(unsigned char pixelBelow, float opacityBelow,
     else return (pixelBelow-pixelAbove*opacityAbove)/(1.-opacityAbove);
 }
 
-void makeLUT(LUT* lut, Effect e, float amount){
-    lut->effectAmount = amount;
-    lut->LUTEffect = e;
-    int i;
-    switch (e) {
-    case CONTRASTPLUS:
-        lut->values[0] = 0;
-        lut->values[127] = 127;
-        lut->values[255] = 255;
-        for(i=1;i<127;i++)
-            lut->values[i] = max(0,i-126*amount);
-        for(i=128;i<255;i++)
-            lut->values[i] = min(255,i+126*amount);
-        break;
-    case CONTRASTMINUS:
-        lut->values[127] = 127;
-        for(i=0;i<127;i++)
-            lut->values[i] = min(127,i+126*amount);
-        for(i=128;i<256;i++)
-            lut->values[i] = max(127,i-126*amount);
-        break;
-
-    /*case BRIGHTNESSPLUS:
-        for(i=0;i<256;i++)
-        lut->values[i] = i+amount;
-        break;
-
-    case BRIGHTNESSMINUS:
-        for(i=0;i<256;i++)
-        lut->values[i] = i- amount;
-        break;
-
-    case SATURATIONPLUS:
-
-
-
-
-    case SATURATIONMINUS:*/
-
-
-
-
-    default:
-        for(i=0;i<256;i++)
-            lut->values[i] = i;
-        break;
-    }
+void addLUTToLayer(LUT *lut, Layer *l){
+	LUTsList_insert(&l->luts,lut);
 }
 
-void combineLUT(LUT *out, LUT *lut1, LUT *lut2){
-    out->effectAmount = 1;
-    out->LUTEffect = MULTIPLE;
-    int i;
-    for(i=0;i<256;i++)
-        out->values[i] = lut2->values[lut1->values[i]];
+void setLUT(LUT *lut, Effect e, float amount){
+	lut->effectAmount = amount;
+	lut->LUTEffect = e;
+	lut->activ = 1;
+	int i;
+	switch (e) {
+	case CONTRAST:
+		lut->values[127] = 127;
+		for(i=0;i<127;i++)
+			lut->values[i] = min((max(0,(i-126*amount))),127);
+		for(i=128;i<256;i++)
+			lut->values[i] = max((min(255,(i+126*amount))),127);
+		break;
+
+	/*case BRIGHTNESSPLUS:
+		for(i=0;i<256;i++)
+		lut->values[i] = i+amount;
+		break;
+
+	case BRIGHTNESSMINUS:
+		for(i=0;i<256;i++)
+		lut->values[i] = i- amount;
+		break;
+
+	case SATURATIONPLUS:
+
+
+
+
+	case SATURATIONMINUS:*/
+
+
+
+
+	default:
+		for(i=0;i<256;i++)
+			lut->values[i] = i;
+		break;
+	}
+}
+
+LUT *makeLUT(Effect e, float amount){
+	LUT* lut = malloc(sizeof(LUT));
+	setLUT(lut,e,amount);
+	return lut;
+}
+
+void combineLUT(unsigned char values[256], LUT *lut1, LUT *lut2){
+	if(lut2->activ){
+		int i;
+		for(i=0;i<256;i++)
+			values[i] = lut2->values[lut1->values[i]];
+	}
+}
+
+void combineAllLUT(LUT* out, LUTsList* luts){
+	int i = 0;
+	for(;i<256;i++)
+		out->values[i] = i;
+	out->activ = 1;
+	out->effectAmount = 1;
+	out->LUTEffect = MULTIPLE;
+	while(luts!=NULL){
+		combineLUT(out->values, out, luts->element);
+		luts = luts->next;
+	}
 }
 
 void makeEmptyPicture(Picture* p, unsigned int width, unsigned int height){
@@ -629,6 +623,80 @@ void makeCfPicture(Layer *lf, LayersList *layers, int pixelsize){
 void updateCfLayer(Picture* p, int pixelsize){
     copyLayer(&p->Cf,&p->beforeCf);
     makeCfPicture(&p->Cf,p->current, pixelsize);
+}
+
+void putCurrentLayerFront(Picture *p){
+    if(p->current->previous!=NULL)
+    {
+        if(p->current->next!=NULL){
+            int x = min(p->current->element->x,p->current->next->element->x),
+                y = min(p->current->element->y,p->current->next->element->y),
+                x2 = max((p->current->element->x + p->current->element->width),
+                         (p->current->next->element->x + p->current->next->element->width)),
+                y2 = max((p->current->element->y + p->current->element->height),
+                         (p->current->next->element->y + p->current->next->element->height));
+            int width = x2 - x, height = y2 -y;
+			LayersList* next = NULL;
+            if(p->current->next!=NULL){
+				next = p->current->next->next;
+                p->current->next->previous = p->current->previous;
+				if(p->current->next->next){
+					p->current->next->next->previous = p->current;
+				}
+				p->current->next->next = p->current;
+            }
+            if(p->current->previous!=NULL){
+                p->current->previous->next = p->current->next;
+            }
+            p->current->previous = p->current->next;
+			p->current->next = next;
+            p->currentID++;
+            copyLayerInRect(&p->beforeCf,&p->blank,x,y,width,height);
+
+            int i = 1;
+            LayersList* l;
+            for(l = p->layers.next;i<p->currentID;l=l->next,i++){
+                blendTwoLayerInRect(&p->beforeCf,l->element,0,1,x,y,width,height);
+            }
+        }
+    }
+}
+
+void putCurrentLayerBehind(Picture *p){
+    if(p->current->previous!=NULL)
+    {
+        if(p->current->previous->previous!=NULL){
+            int  x = min(p->current->element->x,p->current->previous->element->x),
+                 y = min(p->current->element->y,p->current->previous->element->y),
+                 x2 = max((p->current->element->x + p->current->element->width),
+                         (p->current->previous->element->x + p->current->previous->element->width)),
+                 y2 = max((p->current->element->y + p->current->element->height),
+                         (p->current->previous->element->y + p->current->previous->element->height));
+            int width = x2 - x, height = y2 -y;
+			LayersList* previous = NULL;
+			if(p->current->previous!=NULL){
+				previous = p->current->previous->previous;
+                p->current->previous->next = p->current->next;
+				if(p->current->previous->previous!=NULL){
+					p->current->previous->previous->next = p->current;
+				}
+				p->current->previous->previous = p->current;
+            }
+            if(p->current->next!=NULL){
+                p->current->next->previous = p->current->previous;
+            }
+			p->current->next = p->current->previous;
+			p->current->previous = previous;
+            p->currentID--;
+            copyLayerInRect(&p->beforeCf,&p->blank,x,y,width,height);
+
+            int i = 1;
+            LayersList* l;
+            for(l = p->layers.next;i<p->currentID;l=l->next,i++){
+                blendTwoLayerInRect(&p->beforeCf,l->element,0,1,x,y,width,height);
+            }
+        }
+    }
 }
 
 void removeCurrentLayer(Picture *p){

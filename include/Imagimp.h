@@ -21,15 +21,18 @@ void removeLastCharacter(String *s);
 char* convertString(String s);
 void freeString(String s);
 
-typedef enum { BTN_QUIT=0, BTN_SAVE, BTN_LOAD, BTN_OPACITY,
-                BTN_DISPLAYMODE, BTN_DELETELAYER, BTN_BLENDMODE, MAIN_NBBUTTONS } MAINBTNS;
+typedef enum { BTN_QUIT=0, BTN_SAVE, BTN_LOAD, BTN_OPACITY, BTN_UPLAYER, BTN_DOWNLAYER, BTN_ADDLUT, BTN_LUTLIST,
+                BTN_DISPLAYMODE, BTN_DELETELAYER, BTN_BLENDMODE, MAIN_NBBUTTONS} MAINBTNS;
 typedef enum { BTN_YES=0, BTN_NO, BTN_OK, BTN_CANCEL, DIALOG_NBBUTTONS} DIALOGBTNS;
 typedef enum { FLAGS_YES=1,FLAGS_NO=2,FLAGS_OK=4,
-                FLAGS_CANCEL=8, FLAGS_PROMPT=16, FLAGS_SLIDER=32, FLAGS_RADIOBUTTON=64} DIALOGFLAGS;
+				FLAGS_CANCEL=8, FLAGS_PROMPT=16, FLAGS_SLIDER=32, FLAGS_RADIOBUTTON=64} DIALOGFLAGS;
+typedef enum { LBL_FILE, LBL_CURRENTLAYER, LBL_LAYERLIST, MAIN_NBLABEL} MAINLABELS;
 
 struct {
     Component mainButtons[MAIN_NBBUTTONS];
     Component blendButtons[NBBLEND];
+	Component effectsButtons[NBEFFECTS];
+	Component labels[MAIN_NBLABEL];
     Component* pressedButton;
     Component* hoveredButton;
     ComponentsList* components;
@@ -72,15 +75,21 @@ void Imagimp_quit();
 void Imagimp_switchDisplay();
 void Imagimp_removeCurrentLayer();
 void Imagimp_addEmptyLayer();
+void Imagimp_putCurrentLayerFront();
+void Imagimp_putCurrentLayerBehind();
 void Imagimp_setOpacityToCurrentLayer(float opacity);
 
 void openOpacityDialog();
 void openPPMImportDialog();
 void openPPMExportDialog();
+void openLUTAddingDialog();
+void openLUTListDialog();
 void openBlendDialog();
 void addRadioButtonInDialog(Component *radioButton);
 
 void activeDialog(const char* text, int flag, void (*closeHandle)(DIALOGBTNS));
 void desactiveDialog();
 void Dialog_draw();
+
+Bounds currentLayerBounds();
 #endif /* IMAGIMP_H */

@@ -1,7 +1,8 @@
 #include "dliste.h"
+#include "liste.h"
 #include "outils.h"
 
-typedef enum EFFECT {CONTRASTPLUS, CONTRASTMINUS, MULTIPLE, NBEFFECTS} Effect;
+typedef enum EFFECT {MULTIPLE=-1,CONTRAST=0, NBEFFECTS} Effect;
 typedef enum BLENDMODE { BLEND_ADD=0, BLEND_MOY, BLEND_MULT, BLEND_SUB, BLEND_DIV, NBBLEND } BlendMode;
 #define DEFAULTBLEND BLEND_MULT
 
@@ -34,10 +35,11 @@ unsigned char divBlend(unsigned char pixelBelow, float opacityBelow,
 typedef struct {
     Effect LUTEffect;
     float effectAmount;
+	char activ;
     unsigned char values[256];
 } LUT;
 
-DECLARER_DLISTE(LUTsList, LUT)
+DECLARER_LISTE(LUTsList, LUT)
 
 typedef struct {
     unsigned long max;
@@ -75,8 +77,11 @@ void makeGrayHistogrammeFromLayer(Histogramme* histogramme, const Layer *layer);
 void drawHistorgramme(const Histogramme* histogramme, HistogrammeType type, const Bounds *b);
 void updateHistogramme(Layer* l);
 
-void makeLUT(LUT* lut, Effect e, float effectAmount);
-void combineLUT(LUT* out, LUT* lut1, LUT* lut2);
+void addLUTToLayer(LUT* lut, Layer* l);
+LUT* makeLUT(Effect e, float effectAmount);
+void setLUT(LUT* lut, Effect e, float effectAmount);
+void combineLUT(unsigned char values[], LUT* lut1, LUT* lut2);
+void combineAllLUT(LUT* out, LUTsList* luts);
 //void makeLUT(LUT* lut, EFFECT e, float effectAmount);
 
 DECLARER_DLISTE(LayersList, Layer)
@@ -98,6 +103,8 @@ void addNewLayer(Picture* p, unsigned char* rgbSrc, int width, int height);
 int pictureIsEmpty(const Picture* p);
 void makeCfPicture(Layer* lf, LayersList* layers, int pixelsize);
 void removeCurrentLayer(Picture* p);
+void putCurrentLayerFront(Picture* p);
+void putCurrentLayerBehind(Picture* p);
 void updateCfLayer(Picture* p, int pixelsize);
 void changeCurrentTo(Picture *p, int indice);
 void changeCurrentToAboveLayer(Picture* p);

@@ -45,7 +45,7 @@
 	<stdlib.h>
 	<assert.h>
 
-1463698995 source:c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\src\imagimp\imagimp.c
+1463760663 source:c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\src\imagimp\imagimp.c
 	<string.h>
 	<stdlib.h>
 	<stdio.h>
@@ -55,7 +55,7 @@
 	"PPM.h"
 	"outils.h"
 
-1463696785 c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\include\imagimp.h
+1463759083 c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\include\imagimp.h
 	"interface.h"
 	"layer.h"
 
@@ -78,7 +78,7 @@
 	"layer.h"
 	"outils.h"
 
-1463696594 c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\include\layer.h
+1463750521 c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\include\layer.h
 	"dliste.h"
 	"outils.h"
 	"pile.h"

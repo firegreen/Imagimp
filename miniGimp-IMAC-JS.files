@@ -12,3 +12,4 @@ src/imagimp/Imagimp.c
 src/imagimp/main.c
 src/imagimp/PPM.c
 Makefile
+include/liste.h

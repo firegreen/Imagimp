@@ -183,7 +183,7 @@ extern Component* findComponentInList(float x, float y, ComponentsList* list);
 extern Component* findComponentInArray(float x, float y, Component *components, int nbComponents);
 extern void drawAllComponents(const ComponentsList *list);
 
-typedef enum { BUTTON, RADIOBUTTON, SLIDER } ComponentType;
+typedef enum { LABEL, BUTTON, RADIOBUTTON, SLIDER } ComponentType;
 
 typedef struct Component {
     ComponentType type;
@@ -196,9 +196,10 @@ typedef struct Component {
     int invisible;
     int inactiv;
     union {
-        struct { char* label; } Button;
-        struct { char* label; ComponentsList* othersRadioButton; char isSelected;} RadioButton;
-        struct { Bounds cursorBounds; float value; } Slider;
+		struct { char* text; void* font;} Label;
+		struct { char* text; } Button;
+		struct { char* text; ComponentsList* othersRadioButton; char isSelected;} RadioButton;
+		struct { Bounds cursorBounds; float value; float min; float max;} Slider;
     } extends;
 } Component;
 
@@ -211,12 +212,15 @@ extern void setComponentInvisible(Component* c, int invisible);
 extern void setComponentInactiv(Component* c, int inactiv);
 
 
-extern Component makeButton(char* label, Bounds bounds,Color fore, Color back,
+extern Component makeLabel(char *text, Bounds bounds, Color fore, void* font);
+extern void setLabelText(Component *c, char* text);
+
+extern Component makeButton(char* text, Bounds bounds,Color fore, Color back,
                   void (*clickHandle)(const void*));
-extern void setButtonLabel(Component *c, char* label);
+extern void setButtonText(Component *c, char* text);
 extern void selectRadioButton(Component *b);
 
-extern Component makeRadioButton(char* label, Bounds bounds,Color fore, Color back,
+extern Component makeRadioButton(char* text, Bounds bounds,Color fore, Color back,
                                 void (*clickHandle)(const void*));
 extern void addButtonToRadioButtonList(Component *radioButton1, Component *radioButton2);
 
@@ -226,5 +230,7 @@ extern void setComponentValue(Component *s, float value);
 extern void setComponentValueFromPos(Component *s, float x);
 extern void setSliderValueFromPos(Component *s, float x);
 extern void setSliderValue(Component *s, float value);
+extern void setSliderMax(Component *s, float max);
+extern void setSliderMin(Component *s, float min);
 
 #endif
