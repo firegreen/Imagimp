@@ -2,30 +2,14 @@
 #define IMAGIMP_H
 
 #include "interface.h"
-#include "layer.h"
-typedef struct StringChar{
-    char c;
-    struct StringChar* next;
-    struct StringChar* previous;
-} StringChar;
+#include "picture.h"
+#include "imagimp_dialog.h"
 
-typedef struct String{
-    unsigned int size;
-    StringChar* first;
-    StringChar* last;
-}String;
-
-String makeString();
-void addCharacter(String *s, char c);
-void removeLastCharacter(String *s);
-char* convertString(String s);
-void freeString(String s);
-
-typedef enum { BTN_QUIT=0, BTN_SAVE, BTN_LOAD, BTN_OPACITY, BTN_UPLAYER, BTN_DOWNLAYER, BTN_ADDLUT, BTN_LUTLIST,
-                BTN_DISPLAYMODE, BTN_DELETELAYER, BTN_BLENDMODE, MAIN_NBBUTTONS} MAINBTNS;
-typedef enum { BTN_YES=0, BTN_NO, BTN_OK, BTN_CANCEL, DIALOG_NBBUTTONS} DIALOGBTNS;
+typedef enum { BTN_QUIT=0, BTN_SAVE, BTN_LOAD, BTN_OPACITY, BTN_UPLAYER, BTN_DOWNLAYER, BTN_ADDLUT,
+			   BTN_LUTLIST, BTN_DISPLAYMODE, BTN_DELETELAYER, BTN_BLENDMODE, BTN_MAINHISTOGRAMME,
+			   BTN_RESIZE, MAIN_NBBUTTONS} MAINBTNS;
 typedef enum { FLAGS_YES=1,FLAGS_NO=2,FLAGS_OK=4,
-				FLAGS_CANCEL=8, FLAGS_PROMPT=16, FLAGS_SLIDER=32, FLAGS_RADIOBUTTON=64} DIALOGFLAGS;
+				FLAGS_CANCEL=8, FLAGS_PROMPT=16, FLAGS_SLIDER=32, FLAGS_RADIOBUTTON=64, FLAGS_COMPONENTSET=128} DIALOGFLAGS;
 typedef enum { LBL_FILE, LBL_CURRENTLAYER, LBL_LAYERLIST, MAIN_NBLABEL} MAINLABELS;
 
 struct {
@@ -39,32 +23,14 @@ struct {
     unsigned char* image_base;
     unsigned char mouseButtonPressed;
     unsigned char dialogMode;
+	char histogrammeMode;
     unsigned char displayMode;
     Picture picture;
     unsigned char dragImage;
-    unsigned char dragLayer;
+	unsigned char dragLayer;
 } Imagimp;
 
-struct {
-    char* text;
-    String input;
-    char prompt;
-    char choice;
-    Component buttons[DIALOG_NBBUTTONS];
-    Component slider;
-    ComponentsList* components;
-    ComponentsList* radioButtons;
-    unsigned int nbRadioButtons;
-    Bounds bounds;
-    float xText, yText;
-    float xBtn, yBtn;
-    Bounds promptBounds;
-    void (*closeHandle)(DIALOGBTNS);
-} Dialog;
-
-//void Imagimp_init(int argc, char *argv[]);
 void Imagimp_launch(int argc, char *argv[]);
-void Imagimp_handleKeyboardTexte(unsigned char ascii, int x, int y);
 void Imagimp_handleKeyboard(unsigned char ascii, int x, int y, char CTRL, char ALT);
 void Imagimp_handleKeyboardSpecial(int touche, int x, int y);
 void Imagimp_handleMouseClick(int button, int state, float xGL, float yGL);
@@ -77,6 +43,7 @@ void Imagimp_removeCurrentLayer();
 void Imagimp_addEmptyLayer();
 void Imagimp_putCurrentLayerFront();
 void Imagimp_putCurrentLayerBehind();
+void Imagimp_switchHistogramme();
 void Imagimp_setOpacityToCurrentLayer(float opacity);
 
 void openOpacityDialog();
@@ -85,11 +52,7 @@ void openPPMExportDialog();
 void openLUTAddingDialog();
 void openLUTListDialog();
 void openBlendDialog();
-void addRadioButtonInDialog(Component *radioButton);
-
-void activeDialog(const char* text, int flag, void (*closeHandle)(DIALOGBTNS));
-void desactiveDialog();
-void Dialog_draw();
+void openResizeDialog();
 
 Bounds currentLayerBounds();
 #endif /* IMAGIMP_H */

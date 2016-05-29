@@ -69,6 +69,7 @@ struct {
 	unsigned int height;
 	unsigned char fullscreen;
 	float UIstartX;
+	float UIwidth;
 	Color backgroundUI;
 	Color backgroundImage;
 } screen;
@@ -281,6 +282,7 @@ void initDisplay() {
 	screen.backgroundUI = makeColor(0,0,0,0);
 	screen.backgroundImage = makeColor(0,0,0,0);
 	screen.UIstartX = 0.8;
+	screen.UIwidth =  0.2;
 	//printf("Fin initialisation display\n");
 }
 
@@ -455,6 +457,10 @@ float getUIStartX(){
 	return screen.UIstartX;
 }
 
+float getUIWidth(){
+	return screen.UIwidth;
+}
+
 /// ///////////////////////////////////////////////////////////////////////////
 /// AUTRES OUTILS
 /// ///////////////////////////////////////////////////////////////////////////
@@ -605,7 +611,7 @@ Component makeButton(char *text, Bounds bounds, Color fore, Color back,
 					 void (*clickHandle)(const void*)){
 	Component b;
 	b.type = BUTTON;
-	b.extends.Button.text = malloc(sizeof(char)*strlen(text)+1);
+	b.extends.Button.text = malloc(sizeof(char)*(strlen(text)+1));
 	strcpy(b.extends.Button.text,text);
 	b.bounds = bounds;
 	b.fore = fore;
@@ -626,8 +632,32 @@ void privateDrawButton(const Component* b,const Color* fore, const Color* back){
 	float width = (float)glutBitmapLength(GLUT_BITMAP_8_BY_13,
 										  (unsigned char*)(b->extends.Button.text))/(float)screen.width;
 	float height = (float)glutBitmapWidth(GLUT_BITMAP_8_BY_13,'_') * 8./(13.*(float)screen.height);
-	writeString(b->bounds.x + b->bounds.width/2. - width/2.,
-				b->bounds.y + b->bounds.height/2. - height/2.,b->extends.Button.text);
+	if(b->type==CHECKBUTTON || b->type==RADIOBUTTON){
+		if(b->extends.RadioButton.isSelected){
+			drawDisque(b->bounds.x2 - b->bounds.width*0.1,
+					   b->bounds.y2 - b->bounds.height*0.5,
+					   b->bounds.height*0.07);
+		}
+		writeString(b->bounds.x + b->bounds.width*0.8/2. - width/2.,
+					b->bounds.y + b->bounds.height/2. - height/2.,b->extends.Button.text);
+	}
+	else if(b->type==DELETABLEBUTTON){
+		drawLigne(b->extends.DeletableButton.closeBounds.x,
+				  b->extends.DeletableButton.closeBounds.y,
+				  b->extends.DeletableButton.closeBounds.x2,
+				  b->extends.DeletableButton.closeBounds.y2);
+		drawLigne(b->extends.DeletableButton.closeBounds.x,
+				  b->extends.DeletableButton.closeBounds.y2,
+				  b->extends.DeletableButton.closeBounds.x2,
+				  b->extends.DeletableButton.closeBounds.y);
+		writeString(b->bounds.x + (b->bounds.width-b->extends.DeletableButton.closeBounds.width)/2. - width/2.,
+					b->bounds.y + b->bounds.height/2. - height/2.,b->extends.Button.text);
+	}
+	else{
+		writeString(b->bounds.x + b->bounds.width/2. - width/2.,
+					b->bounds.y + b->bounds.height/2. - height/2.,b->extends.Button.text);
+	}
+
 }
 
 void drawButton(const Component *b){
@@ -663,18 +693,18 @@ void releaseButton(Component *b, int activeAction){
 }
 
 void releaseRadioButton(Component *b, int activeAction){
-	selectRadioButton(b);
-	if(activeAction && b->extends.RadioButton.isSelected && !b->invisible && b->clickHandle!=NULL)
-		(*b->clickHandle)(NULL);
+	if(activeAction	&& !b->invisible && b->clickHandle!=NULL){
+		selectRadioButton(b);
+		if(b->extends.RadioButton.isSelected)
+			(*b->clickHandle)(NULL);
+	}
 }
 
 void selectRadioButton(Component *b){
 	if(!b->inactiv){
-		b->inactiv = 1;
 		b->extends.RadioButton.isSelected = 1;
 		ComponentsList* l = b->extends.RadioButton.othersRadioButton;
 		while(l!=NULL){
-			l->componenent->inactiv = 0;
 			l->componenent->extends.RadioButton.isSelected = 0;
 			l = l->next;
 		}
@@ -705,6 +735,39 @@ Component makeRadioButton(char *text, Bounds bounds, Color fore, Color back, voi
 void addButtonToRadioButtonList(Component *radioButton1, Component *radioButton2){
 	addComponent(radioButton1,&radioButton2->extends.RadioButton.othersRadioButton);
 	addComponent(radioButton2,&radioButton1->extends.RadioButton.othersRadioButton);
+}
+
+Component makeCheckButton(char *text, Bounds bounds, Color fore, Color back, void (*clickHandle)(const void *)){
+	Component c = makeButton(text,bounds,fore,back,clickHandle);
+	c.type = CHECKBUTTON;
+	c.extends.CheckButton.isSelected = 0;
+	return c;
+}
+
+
+Component makeDeletableButton(char *text, Bounds bounds, Color fore, Color back, void (*clickHandle)(const void *)){
+	Component c = makeButton(text,bounds,fore,back,clickHandle);
+	c.type = DELETABLEBUTTON;
+	c.extends.DeletableButton.closeBounds = makeBounds(c.bounds.x2 - c.bounds.width*0.12,
+													   c.bounds.y2 - c.bounds.height*0.7,
+													   c.bounds.width*0.04,
+													   c.bounds.height*0.4);
+	c.extends.DeletableButton.needToBeDelete = 0;
+	return c;
+}
+
+void updateDeletableButtonPos(Component *c){
+	c->extends.DeletableButton.closeBounds = makeBounds(c->bounds.x2 - c->bounds.width*0.12,
+													   c->bounds.y2 - c->bounds.height*0.7,
+													   c->bounds.width*0.04,
+													   c->bounds.height*0.4);
+}
+
+void releaseDeleatableButton(Component *b, int activeAction){
+	if(activeAction && !b->invisible && b->clickHandle!=NULL){
+		b->extends.DeletableButton.needToBeDelete = 1;
+		(*b->clickHandle)(NULL);
+	}
 }
 
 /// ///////////////////////////////////////////////////////////////////////////
@@ -850,7 +913,7 @@ void removeFirstComponent(ComponentsList **list){
 Component* findComponentInList(float x, float y, ComponentsList *list){
 	ComponentsList* pointer;
 	for(pointer = list; pointer!=NULL;pointer=pointer->next){
-		if(isInBounds(x,y,&pointer->componenent->bounds))
+		if(!pointer->componenent->invisible && isInBounds(x,y,&pointer->componenent->bounds))
 			return pointer->componenent;
 	}
 	return NULL;
@@ -859,7 +922,7 @@ Component* findComponentInList(float x, float y, ComponentsList *list){
 Component* findComponentInArray(float x, float y, Component* buttons, int nbbuttons){
 	int i;
 	for(i = 0; i<nbbuttons;i++){
-		if(isInBounds(x,y,&buttons[i].bounds))
+		if(!buttons[i].invisible && isInBounds(x,y,&buttons[i].bounds))
 			return buttons+i;
 	}
 	return NULL;
@@ -877,6 +940,8 @@ void drawComponent(const Component* c){
 		switch (c->type) {
 		case BUTTON:
 		case RADIOBUTTON:
+		case CHECKBUTTON:
+		case DELETABLEBUTTON:
 			drawButton(c);
 			break;
 		case SLIDER:
@@ -914,6 +979,8 @@ void releaseComponent(Component* c, int activeAction){
 	case RADIOBUTTON:
 		releaseRadioButton(c,activeAction);
 		break;
+	case DELETABLEBUTTON:
+		releaseDeleatableButton(c,activeAction);
 	case SLIDER:
 		releaseSlider(c,activeAction);
 		break;
@@ -960,4 +1027,18 @@ void setComponentInvisible(Component* c, int invisible){
 
 void setComponentInactiv(Component* c, int inactiv){
 	c->inactiv = inactiv;
+}
+
+void freeComponent(Component *c){
+	switch(c->type){
+	case BUTTON:
+	case CHECKBUTTON:
+	case DELETABLEBUTTON:
+	case RADIOBUTTON:
+	case LABEL:
+		free(c->extends.Label.text);
+	default:
+		break;
+	}
+	free(c);
 }

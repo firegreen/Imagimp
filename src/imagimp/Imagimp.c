@@ -3,34 +3,96 @@
 #include <stdio.h>
 #include <GL/glut.h>
 #include "interface.h"
-#include "Imagimp.h"
+#include "picture.h"
+#include "imagimp.h"
 #include "PPM.h"
 #include "outils.h"
+#include "imagimp_dialog.h"
 
-const Color BLACK = {0,0,0,1};
-const Color DIALOGBACK = {0.05,0.17,0.15,1};
+
 const Color IMAGIMPBACK = {0.05,0.01,0.07,1};
-const Color DIALOGFORE = {0.75,0.9,0.65,1};
 const Color IMAGIMPFORE = {0.3,0.6,0.4,1};
-const Color TRANSLUCIDE = {1.,1.,1.,0.};
-const Color WHITE = {1,1,1,1};
 float initial_opacity;
 int initial_Blend;
 char inputStr[256];
 
-void Imagimp_quit(){
-    printf("Fin du programme\n");
-    exit(0);
-}
+void Imagimp_updateButton();
 
-void Imagimp_setOpacityToCurrentLayer(float opacity){
-    Imagimp.picture.current->element->opacity = fmaxf(0,fminf(1,opacity));
-    Imagimp_refresh(1);
-}
+/// ///////////////////////////////////////////////////////////////////////////
+/// Handler
+/// ///////////////////////////////////////////////////////////////////////////
 
 void opacitySliderHandle(const void* opacity){
     Imagimp_setOpacityToCurrentLayer(*((float*)opacity));
 }
+
+void Imagimp_putCurrentLayerFront(){
+	putCurrentLayerFront(&Imagimp.picture);
+	Imagimp_updateButton();
+	Imagimp_refresh(1);
+}
+
+void Imagimp_putCurrentLayerBehind(){
+	putCurrentLayerBehind(&Imagimp.picture);
+	Imagimp_updateButton();
+	Imagimp_refresh(1);
+}
+
+void Imagimp_switchHistogramme(){
+
+	Imagimp.histogrammeMode = ((Imagimp.histogrammeMode+2)%(NB_H_TYPES+2))-1;
+	switch (Imagimp.histogrammeMode) {
+	case RED_H:
+		setButtonText(Imagimp.mainButtons + BTN_MAINHISTOGRAMME,"Histogramme Vert");
+		break;
+	case GREEN_H:
+		setButtonText(Imagimp.mainButtons + BTN_MAINHISTOGRAMME,"Histogramme Bleu");
+		break;
+	case BLUE_H:
+		setButtonText(Imagimp.mainButtons + BTN_MAINHISTOGRAMME,"Histogramme Luminosite");
+		break;
+	case GRAYSCALE_H:
+		setButtonText(Imagimp.mainButtons + BTN_MAINHISTOGRAMME,"Tous les Histogrammes");
+		break;
+	case NB_H_TYPES:
+		setButtonText(Imagimp.mainButtons + BTN_MAINHISTOGRAMME,"Cacher Histogramme");
+		break;
+	default:
+		setButtonText(Imagimp.mainButtons + BTN_MAINHISTOGRAMME,"Histogramme Rouge");
+		break;
+	}
+
+}
+
+void Imagimp_switchDisplay(){
+	if(Imagimp.displayMode){
+		Imagimp.displayMode = 0;
+		actualiseImage(Imagimp.picture.current->element->rgb,
+					   Imagimp.picture.current->element->width,Imagimp.picture.current->element->height);
+		setButtonText(Imagimp.mainButtons + BTN_DISPLAYMODE,"Affiche Rendu");
+	}
+	else{
+		Imagimp.displayMode = 1;
+		updateCfLayer(&Imagimp.picture,1);
+		actualiseImage(Imagimp.picture.Cf.rgb, Imagimp.picture.Cf.width,Imagimp.picture.Cf.height);
+		setButtonText(Imagimp.mainButtons + BTN_DISPLAYMODE,"Affiche Calque Original");
+	}
+}
+
+void putInversion(){
+	addLUTToLayer(makeLUT(INVERSED,0),Imagimp.picture.current->element);
+	desactiveDialog();
+	Imagimp_refresh(1);
+}
+void putGrayEffect(){
+	addLUTToLayer(makeLUT(GRAYEFFECT,0),Imagimp.picture.current->element);
+	desactiveDialog();
+	Imagimp_refresh(1);
+}
+
+////////////////////////////////////////////////////
+/// handleDialog
+//////////////////////////////////////////////////
 
 void handleOpacityDialog(DIALOGBTNS answer){
     switch (answer) {
@@ -39,62 +101,6 @@ void handleOpacityDialog(DIALOGBTNS answer){
         break;
     default:
         break;
-    }
-}
-
-void Imagimp_updateButton(){
-    Imagimp.mainButtons[BTN_UPLAYER].inactiv = Imagimp.picture.current->next == NULL;
-    Imagimp.mainButtons[BTN_DELETELAYER].inactiv = Imagimp.picture.current->previous == NULL;
-    Imagimp.mainButtons[BTN_DOWNLAYER].inactiv = Imagimp.mainButtons[BTN_DELETELAYER].inactiv ?
-                                                    1:
-                                                    Imagimp.picture.current->previous->previous == NULL;
-}
-
-void Imagimp_putCurrentLayerFront(){
-    putCurrentLayerFront(&Imagimp.picture);
-    Imagimp_updateButton();
-    Imagimp_refresh(1);
-}
-
-void Imagimp_putCurrentLayerBehind(){
-    putCurrentLayerBehind(&Imagimp.picture);
-    Imagimp_updateButton();
-    Imagimp_refresh(1);
-}
-
-void openOpacityDialog(){
-    initial_opacity = Imagimp.picture.current->element->opacity;
-
-    activeDialog("Opacite",FLAGS_SLIDER | FLAGS_CANCEL | FLAGS_OK, handleOpacityDialog);
-	setSliderMin(&Dialog.slider,0);
-	setSliderMax(&Dialog.slider,1);
-	setSliderValue(&Dialog.slider,Imagimp.picture.current->element->opacity);
-	Dialog.slider.clickHandle = opacitySliderHandle;
-}
-
-void Imagimp_refresh(int pixelsize){
-    if(Imagimp.displayMode){
-        updateCfLayer(&Imagimp.picture,pixelsize);
-        actualiseImage(Imagimp.picture.Cf.rgb, Imagimp.picture.Cf.width,Imagimp.picture.Cf.height);
-    }
-    else{
-        actualiseImage(Imagimp.picture.current->element->rgb,
-                       Imagimp.picture.current->element->width,Imagimp.picture.current->element->height);
-    }
-}
-
-void Imagimp_switchDisplay(){
-    if(Imagimp.displayMode){
-        Imagimp.displayMode = 0;
-        actualiseImage(Imagimp.picture.current->element->rgb,
-                       Imagimp.picture.current->element->width,Imagimp.picture.current->element->height);
-		setButtonText(Imagimp.mainButtons + BTN_DISPLAYMODE,"Affiche Rendu");
-    }
-    else{
-        Imagimp.displayMode = 1;
-        updateCfLayer(&Imagimp.picture,1);
-        actualiseImage(Imagimp.picture.Cf.rgb, Imagimp.picture.Cf.width,Imagimp.picture.Cf.height);
-		setButtonText(Imagimp.mainButtons + BTN_DISPLAYMODE,"Affiche Calque Original");
     }
 }
 
@@ -123,14 +129,26 @@ void handlePPMExportDialog(DIALOGBTNS answer){
     case BTN_OK:
         updateCfLayer(&Imagimp.picture,1);
         if(!writePPM(convertString(Dialog.input),Imagimp.picture.Cf.rgb,
-                     Imagimp.picture.Cf.width,Imagimp.picture.Cf.height))
-            activeDialog("Une erreur est servenu lors de l'écriture du fichier", FLAGS_OK,NULL);
-        else
-            activeDialog("L'image a bien été enregistré :)", FLAGS_OK,NULL);
-        break;
-    default:
-        break;
-    }
+					 Imagimp.picture.Cf.width,Imagimp.picture.Cf.height))
+			activeDialog("Une erreur est servenu lors de l'écriture du fichier", FLAGS_OK,NULL);
+		else
+			activeDialog("L'image a bien été enregistré :)", FLAGS_OK,NULL);
+		break;
+	default:
+		break;
+	}
+}
+
+void handleResizeDialog(DIALOGBTNS answer){
+	unsigned int width,height;
+	switch (answer) {
+	case BTN_OK:
+		sscanf(convertString(Dialog.input),"%uX%u",&width,&height);
+		resizePicture(&Imagimp.picture,width,height);
+		Imagimp_refresh(1);
+	default:
+		break;
+	}
 }
 
 void handleLayerDeletingAskDialog(DIALOGBTNS answer){
@@ -147,7 +165,7 @@ void handleEffectDialog(DIALOGBTNS answer){
 	switch (answer) {
 	case BTN_CANCEL:
 		if(Imagimp.picture.current->element->luts!=NULL){
-			LUTsList_remove(&Imagimp.picture.current->element->luts);
+			LUTsList_removeLast(&Imagimp.picture.current->element->luts);
 			Imagimp_refresh(1);
 		}
 		break;
@@ -174,9 +192,8 @@ void handleBlendModeDialogButton(){
 
 void handleEffectSlider(const void* value){
 	if(Imagimp.picture.current->element->luts!=NULL){
-		setLUT(Imagimp.picture.current->element->luts->element,
-			   Imagimp.picture.current->element->luts->element->LUTEffect,
-			   *((const float*)value));
+		LUT* lut = LUTsList_getLast(Imagimp.picture.current->element->luts);
+		setLUT(lut, lut->LUTEffect, *((const float*)value));
 		Imagimp_refresh(1);
 	}
 }
@@ -193,6 +210,44 @@ void handleBlendModeDialog(DIALOGBTNS answer){
     }
 }
 
+void handleLutListButtonDialog(){
+	ComponentsList* pointer = Dialog.componentsSet;
+	int i=Dialog.nbComponentsInSet-1;
+	while(pointer!=NULL){
+		if(pointer->componenent->type==DELETABLEBUTTON)
+			if(pointer->componenent->extends.DeletableButton.needToBeDelete)
+				break;
+		i--;
+		pointer = pointer->next;
+	}
+	if(pointer!=NULL){
+		LUTsList_removeAt(&Imagimp.picture.current->element->luts,i);
+		Imagimp_refresh(1);
+	}
+	desactiveDialog();
+	openLUTListDialog();
+}
+
+/////////////////////////////////////////////////////
+/// openDialog
+//////////////////////////////////////////////////
+
+void openOpacityDialog(){
+	initial_opacity = Imagimp.picture.current->element->opacity;
+
+	activeDialog("Opacite",FLAGS_SLIDER | FLAGS_CANCEL | FLAGS_OK, handleOpacityDialog);
+	setSliderMin(&Dialog.slider,0);
+	setSliderMax(&Dialog.slider,1);
+	setSliderValue(&Dialog.slider,Imagimp.picture.current->element->opacity);
+	Dialog.slider.clickHandle = opacitySliderHandle;
+}
+
+
+void openResizeDialog(){
+	activeDialog("Redimensionner la zone de travail (\"largeurXHauteur\"):",
+				 FLAGS_PROMPT | FLAGS_CANCEL | FLAGS_OK, handleResizeDialog);
+}
+
 void openPPMImportDialog(){
     activeDialog("Importer un fichier PPM \n Saississez le nom du fichier:",
                  FLAGS_PROMPT | FLAGS_CANCEL | FLAGS_OK, handlePPMImportDialog);
@@ -203,32 +258,74 @@ void openPPMExportDialog(){
                  FLAGS_PROMPT | FLAGS_CANCEL | FLAGS_OK, handlePPMExportDialog);
 }
 
-void openContrastDialog(){
-	addLUTToLayer(makeLUT(CONTRAST,0),Imagimp.picture.current->element);
+void openLUTSetDialog(Effect e, const char* effectName, float min, float max, float current){
+	addLUTToLayer(makeLUT(e,0),Imagimp.picture.current->element);
 	desactiveDialog();
-	activeDialog("Contraste",FLAGS_CANCEL | FLAGS_OK | FLAGS_SLIDER,handleEffectDialog);
-	setSliderMin(&Dialog.slider,-1);
-	setSliderMax(&Dialog.slider,1);
-	setSliderValue(&Dialog.slider,0);
+	activeDialog(effectName,FLAGS_CANCEL | FLAGS_OK | FLAGS_SLIDER,handleEffectDialog);
+	setSliderMin(&Dialog.slider,min);
+	setSliderMax(&Dialog.slider,max);
+	setSliderValue(&Dialog.slider,current);
 	Dialog.slider.clickHandle = handleEffectSlider;
+	Imagimp_refresh(1);
+}
+
+void openContrastDialog(){
+	openLUTSetDialog(CONTRAST, "Contraste",-1,1,0);
+}
+
+void openBrightnessDialog(){
+	openLUTSetDialog(BRIGHTNESS, "Luminosite",-1,1,0);
+}
+void openSepiaDialog(){
+	openLUTSetDialog(SEPIA, "Sepia",0,1,0);
 }
 
 void openLUTAddingDialog(){
-	activeDialog("Ajout LUT",FLAGS_CANCEL,NULL);
+	activeDialog("Ajout LUT",FLAGS_CANCEL | FLAGS_COMPONENTSET,NULL);
 	int i;
 	for(i=0;i<NBEFFECTS;i++){
-		Imagimp.effectsButtons[i].inactiv = 0;
-		addRadioButtonInDialog(Imagimp.effectsButtons + i);
+		addComponentInDialog(Imagimp.effectsButtons + i);
 	}
 }
 
 void openLUTListDialog(){
-	activeDialog("Liste LUT",FLAGS_CANCEL | FLAGS_OK,NULL);
+	activeDialog("Liste LUT",FLAGS_CANCEL | FLAGS_OK | FLAGS_COMPONENTSET,freeDialogSetButtons);
+	LUTsList* lut = Imagimp.picture.current->element->luts;
+	Component* c;
+	char btnText[50];
+	while(lut!=NULL)
+	{
+		c = malloc(sizeof(Component));
+		memset(btnText,0,50);
+		switch(lut->element->LUTEffect){
+		case CONTRAST:
+			sprintf(btnText,"Contraste %3.2f%%",lut->element->effectAmount*100.);
+			break;
+		case BRIGHTNESS:
+			sprintf(btnText,"Luminosite %3.2f%%",lut->element->effectAmount*100.);
+			break;
+		case SEPIA:
+			sprintf(btnText,"Sepia %3.2f%%",lut->element->effectAmount*100.);
+			break;
+		case INVERSED:
+			sprintf(btnText,"Negatif");
+			break;
+		case GRAYEFFECT:
+			sprintf(btnText,"Noir&Blanc");
+			break;
+		default:
+			sprintf(btnText,"Inconnue %3.2f%%",lut->element->effectAmount*100.);
+			break;
+		}
+		(*c) = makeDeletableButton(btnText,makeBounds(0,0,0,0),IMAGIMPFORE,IMAGIMPBACK,handleLutListButtonDialog);
+		addComponentInDialog(c);
+		lut = lut->next;
+	}
 }
 
 void openBlendDialog(){
     activeDialog("Modifier le mode de melange:",
-                 FLAGS_RADIOBUTTON | FLAGS_CANCEL | FLAGS_OK, handleBlendModeDialog);
+				 FLAGS_RADIOBUTTON | FLAGS_CANCEL | FLAGS_OK, handleBlendModeDialog);
     int i;
     for(i=0;i<NBBLEND;i++){
         addRadioButtonInDialog(Imagimp.blendButtons + i);
@@ -240,68 +337,9 @@ void openBlendDialog(){
     }
 }
 
-void Imagimp_addEmptyLayer(){
-    addNewEmptyLayer(&Imagimp.picture);
-    Imagimp_refresh(1);
-}
-
 void openLayerDeletingAskDialog(){
-    activeDialog("Souhaitez-vous reellement supprimer le calque?",FLAGS_YES | FLAGS_NO,
-                 handleLayerDeletingAskDialog);
-}
-
-void Imagimp_removeCurrentLayer(){
-    if(Imagimp.picture.current->previous !=NULL)
-    {
-        removeCurrentLayer(&Imagimp.picture);
-        if(Imagimp.picture.current->previous==NULL)
-            setComponentInactiv(Imagimp.mainButtons + BTN_DELETELAYER,1);
-        Imagimp_refresh(1);
-    }
-    else
-        activeDialog("Impossible de supprimer le calque d'arrière plan", FLAGS_OK,NULL);
-}
-
-void answerOK() {
-    desactiveDialog();
-    if(Dialog.closeHandle != NULL)
-        (*Dialog.closeHandle)(BTN_OK);
-}
-void answerYES() { desactiveDialog(); if(Dialog.closeHandle != NULL) (*Dialog.closeHandle)(BTN_YES); }
-void answerNO() { desactiveDialog(); if(Dialog.closeHandle != NULL) (*Dialog.closeHandle)(BTN_NO); }
-void answerCANCEL() { desactiveDialog(); if(Dialog.closeHandle != NULL) (*Dialog.closeHandle)(BTN_CANCEL);}
-
-void initDialog(){
-    float btnsizeX = 0.1f;
-    float btnsizeY = 0.04f;
-    Dialog.text = NULL;
-    Dialog.bounds = makeBounds(0.25,0.35,0.5,0.35);
-    Dialog.buttons[BTN_YES] = makeButton("Oui",makeBounds(0,0,btnsizeX,btnsizeY),
-                                         DIALOGFORE,DIALOGBACK,answerYES);
-    Dialog.buttons[BTN_NO] = makeButton("Non",makeBounds(0,0,btnsizeX,btnsizeY),
-                                        DIALOGFORE,DIALOGBACK,answerNO);
-    Dialog.buttons[BTN_OK] = makeButton("Ok",makeBounds(0,0,btnsizeX,btnsizeY),
-                                        DIALOGFORE,DIALOGBACK,answerOK);
-    Dialog.buttons[BTN_CANCEL] = makeButton("Annuler",makeBounds(0,0,btnsizeX,btnsizeY),
-                                            DIALOGFORE,DIALOGBACK,answerCANCEL);
-    Dialog.slider = makeSlider(makeBounds(Dialog.bounds.x+0.1,Dialog.bounds.y+Dialog.bounds.y/3,
-                                          Dialog.bounds.width-0.2,Dialog.bounds.y/5),
-                               DIALOGFORE,DIALOGBACK,NULL);
-    Dialog.input = makeString();
-    Dialog.promptBounds = makeBounds(Dialog.bounds.x + 0.05,Dialog.bounds.y2-0.2,Dialog.bounds.width-0.1,0.08);
-    Dialog.xBtn = Dialog.bounds.x2-0.15;
-    Dialog.yBtn = Dialog.bounds.y+0.025;
-    Dialog.xText = Dialog.promptBounds.x;
-    Dialog.yText = Dialog.promptBounds.y2+0.07;
-    Dialog.components = makeComponentsList(Dialog.buttons);
-    int i;
-    for(i=1;i<DIALOG_NBBUTTONS;i++)
-    {
-        addComponent(Dialog.buttons+i,&Dialog.components);
-    }
-    addComponent(&Dialog.slider,&Dialog.components);
-    Dialog.radioButtons = NULL;
-    desactiveDialog();
+	activeDialog("Souhaitez-vous reellement supprimer le calque?",FLAGS_YES | FLAGS_NO,
+				 handleLayerDeletingAskDialog);
 }
 
 void makeImageBase(int width, int height){
@@ -355,62 +393,18 @@ void makeImageBase(int width, int height){
     }
 }
 
-void Imagimp_launch(int argc, char *argv[]) {
-    unsigned int w=800, h=600, ihm_w=200;
-    int i,fileImport=0;
-    for (i=1;i<argc;i++) {
-        if (strcmp(argv[i],"-h") == 0) {
-            printf("Affichage de l'aide\n");
-            exit(1);
-        }
-        else if (strcmp(argv[i],"-f") == 0) {
-            printf("Chargement fichier :\n");
-            i++;
-            fileImport = 1;
-            if(i<argc){
-                Imagimp.image_base = readPPM(argv[i],&w,&h);
-                if(Imagimp.image_base==NULL){
-                    fprintf(stderr, "Impossible de lire le fichier %s",argv[i]);
-                    exit(1);
-                }
-            }
-            else{
-                fgets(inputStr,sizeof(inputStr),stdin);
-                Imagimp.image_base = readPPM(inputStr,&w,&h);
-                if(Imagimp.image_base==NULL){
-                    fprintf(stderr, "Impossible de lire le fichier %s",argv[i]);
-                    exit(1);
-                }
-            }
-            exit(1);
-        }
-    }
-    if(!fileImport)
-        makeImageBase(w,h);
-
-    makeEmptyPicture(&Imagimp.picture, w,h);
-    addNewLayer(&Imagimp.picture,Imagimp.image_base,w,h);
-    updateCfLayer(&Imagimp.picture,1);
-    Imagimp.hoveredButton = NULL;
-    Imagimp.pressedButton = NULL;
-    Imagimp.mouseButtonPressed=0;
-    Imagimp.displayMode = 1;
-    Imagimp.dialogMode = 0;
-    Imagimp.dragImage = Imagimp.dragLayer = 0;
-    initGLIMAGIMP_IHM(w, h, Imagimp.picture.Cf.rgb, w+ihm_w, h,0);
-    setBackground(makeColor(0.02,0.03,0.05,1),IMAGIMPBACK);
-    fixeFonctionClicSouris(Imagimp_handleMouseClick);
-    fixeFonctionMotionSouris(Imagimp_handleMouseMotion);
-    fixeFonctionClavier(Imagimp_handleKeyboard);
-    fixeFonctionClavierSpecial(Imagimp_handleKeyboardSpecial);
-    fixeFonctionDessin(Imagimp_draw);
+///////////////////////////////////////////////////////////
+/// Imagimp
+///////////////////////////////////////////////////////////
 
 
+void Imagimp_setButtons(){
 	float startX = getUIStartX() + 0.005;
 	float btnsizeX = 0.195f;
-    float btnsizeY = 0.04f;
+	float btnsizeY = 0.04f;
+	int i;
 	Imagimp.mainButtons[BTN_LOAD] = makeButton("Charger...",makeBounds(startX,0.85f,btnsizeX,btnsizeY),
-                                           IMAGIMPFORE,IMAGIMPBACK,openPPMImportDialog);
+										   IMAGIMPFORE,IMAGIMPBACK,openPPMImportDialog);
 	Imagimp.mainButtons[BTN_SAVE] = makeButton("Sauvegarder...",makeBounds(startX,0.8f,btnsizeX,btnsizeY),
 										   IMAGIMPFORE,IMAGIMPBACK,openPPMExportDialog);
 	Imagimp.mainButtons[BTN_QUIT] = makeButton("Quitter",makeBounds(startX,0.75f,btnsizeX,btnsizeY),
@@ -419,112 +413,167 @@ void Imagimp_launch(int argc, char *argv[]) {
 
 	Imagimp.mainButtons[BTN_DISPLAYMODE] = makeButton("Afficher Calque Original",makeBounds(startX,0.6f,btnsizeX,btnsizeY),
 												  IMAGIMPFORE,IMAGIMPBACK,Imagimp_switchDisplay);
+	Imagimp.mainButtons[BTN_MAINHISTOGRAMME] = makeButton("Histogramme Rouge",makeBounds(startX,0.55f,btnsizeX,btnsizeY),
+												  IMAGIMPFORE,IMAGIMPBACK,Imagimp_switchHistogramme);
+	Imagimp.mainButtons[BTN_RESIZE] = makeButton("Redimensionner",makeBounds(startX,0.5f,btnsizeX,btnsizeY),
+												  IMAGIMPFORE,IMAGIMPBACK,openResizeDialog);
 
-	Imagimp.mainButtons[BTN_DELETELAYER] = makeButton("Supprimer Calque Courant",makeBounds(startX,0.45f,btnsizeX,btnsizeY),
+	Imagimp.mainButtons[BTN_DELETELAYER] = makeButton("Supprimer Calque Courant",makeBounds(startX,0.35f,btnsizeX,btnsizeY),
 												  IMAGIMPFORE,IMAGIMPBACK,openLayerDeletingAskDialog);
-	Imagimp.mainButtons[BTN_UPLAYER] = makeButton("Avancer",makeBounds(startX,0.4f,btnsizeX/2.,btnsizeY),
-                                           IMAGIMPFORE,IMAGIMPBACK,Imagimp_putCurrentLayerFront);
-	Imagimp.mainButtons[BTN_DOWNLAYER] = makeButton("Reculer",makeBounds(startX+btnsizeX/2.,0.4f,btnsizeX/2.,btnsizeY),
-                                           IMAGIMPFORE,IMAGIMPBACK,Imagimp_putCurrentLayerBehind);
-	Imagimp.mainButtons[BTN_ADDLUT] = makeButton("Ajouter LUT",makeBounds(startX,0.35f,btnsizeX,btnsizeY),
+	Imagimp.mainButtons[BTN_UPLAYER] = makeButton("Avancer",makeBounds(startX,0.3f,btnsizeX/2.,btnsizeY),
+										   IMAGIMPFORE,IMAGIMPBACK,Imagimp_putCurrentLayerFront);
+	Imagimp.mainButtons[BTN_DOWNLAYER] = makeButton("Reculer",makeBounds(startX+btnsizeX/2.,0.3f,btnsizeX/2.,btnsizeY),
+										   IMAGIMPFORE,IMAGIMPBACK,Imagimp_putCurrentLayerBehind);
+	Imagimp.mainButtons[BTN_ADDLUT] = makeButton("Ajouter LUT",makeBounds(startX,0.25f,btnsizeX,btnsizeY),
 										   IMAGIMPFORE,IMAGIMPBACK,openLUTAddingDialog);
-	Imagimp.mainButtons[BTN_LUTLIST] = makeButton("Liste LUT",makeBounds(startX,0.3f,btnsizeX,btnsizeY),
+	Imagimp.mainButtons[BTN_LUTLIST] = makeButton("Liste LUT",makeBounds(startX,0.2f,btnsizeX,btnsizeY),
 										   IMAGIMPFORE,IMAGIMPBACK,openLUTListDialog);
-	Imagimp.mainButtons[BTN_OPACITY] = makeButton("Opacite...",makeBounds(startX,0.25f,btnsizeX,btnsizeY),
-                                              IMAGIMPFORE,IMAGIMPBACK,openOpacityDialog);
-	Imagimp.mainButtons[BTN_BLENDMODE] = makeButton("Melange...",makeBounds(startX,0.2f,btnsizeX,btnsizeY),
-                                                  IMAGIMPFORE,IMAGIMPBACK,openBlendDialog);
+	Imagimp.mainButtons[BTN_OPACITY] = makeButton("Opacite...",makeBounds(startX,0.15f,btnsizeX,btnsizeY),
+											  IMAGIMPFORE,IMAGIMPBACK,openOpacityDialog);
+	Imagimp.mainButtons[BTN_BLENDMODE] = makeButton("Melange...",makeBounds(startX,0.1f,btnsizeX,btnsizeY),
+												  IMAGIMPFORE,IMAGIMPBACK,openBlendDialog);
 
-    btnsizeX = 0.08f;
-    btnsizeY = 0.05f;
-    Imagimp.blendButtons[BLEND_ADD] = makeRadioButton("Addition",makeBounds(0,0,btnsizeX,btnsizeY),
+	btnsizeX = 0.095f;
+	btnsizeY = 0.05f;
+	Imagimp.blendButtons[BLEND_ADD] = makeRadioButton("Addition",makeBounds(0,0,btnsizeX,btnsizeY),
 										   IMAGIMPFORE,IMAGIMPBACK,handleBlendModeDialogButton);
-    Imagimp.blendButtons[BLEND_DIV] = makeRadioButton("Division",makeBounds(0,0,btnsizeX,btnsizeY),
-                                           IMAGIMPFORE,IMAGIMPBACK,handleBlendModeDialogButton);
-    Imagimp.blendButtons[BLEND_MOY] = makeRadioButton("Moyenne",makeBounds(0,0,btnsizeX,btnsizeY),
-                                           IMAGIMPFORE,IMAGIMPBACK,handleBlendModeDialogButton);
-    Imagimp.blendButtons[BLEND_MULT] = makeRadioButton("Produit",makeBounds(0,0,btnsizeX,btnsizeY),
-                                              IMAGIMPFORE,IMAGIMPBACK,handleBlendModeDialogButton);
-    Imagimp.blendButtons[BLEND_SUB] = makeRadioButton("Difference",makeBounds(0,0,btnsizeX,btnsizeY),
-                                                  IMAGIMPFORE,IMAGIMPBACK,handleBlendModeDialogButton);
+	Imagimp.blendButtons[BLEND_DIV] = makeRadioButton("Division",makeBounds(0,0,btnsizeX,btnsizeY),
+										   IMAGIMPFORE,IMAGIMPBACK,handleBlendModeDialogButton);
+	Imagimp.blendButtons[BLEND_MOY] = makeRadioButton("Moyenne",makeBounds(0,0,btnsizeX,btnsizeY),
+										   IMAGIMPFORE,IMAGIMPBACK,handleBlendModeDialogButton);
+	Imagimp.blendButtons[BLEND_MULT] = makeRadioButton("Produit",makeBounds(0,0,btnsizeX,btnsizeY),
+											  IMAGIMPFORE,IMAGIMPBACK,handleBlendModeDialogButton);
+	Imagimp.blendButtons[BLEND_SUB] = makeRadioButton("Difference",makeBounds(0,0,btnsizeX,btnsizeY),
+												  IMAGIMPFORE,IMAGIMPBACK,handleBlendModeDialogButton);
 
-	Imagimp.effectsButtons[CONTRAST] = makeRadioButton("Contraste",makeBounds(0,0,btnsizeX,btnsizeY),
+	Imagimp.effectsButtons[CONTRAST] = makeButton("Contraste",makeBounds(0,0,btnsizeX,btnsizeY),
 										   IMAGIMPFORE,IMAGIMPBACK,openContrastDialog);
+	Imagimp.effectsButtons[BRIGHTNESS] = makeButton("Luminosite",makeBounds(0,0,btnsizeX,btnsizeY),
+										   IMAGIMPFORE,IMAGIMPBACK,openBrightnessDialog);
+	Imagimp.effectsButtons[SEPIA] = makeButton("Sepia",makeBounds(0,0,btnsizeX,btnsizeY),
+										   IMAGIMPFORE,IMAGIMPBACK,openSepiaDialog);
+	Imagimp.effectsButtons[INVERSED] = makeButton("Negatif",makeBounds(0,0,btnsizeX,btnsizeY),
+										   IMAGIMPFORE,IMAGIMPBACK,putInversion);
+	Imagimp.effectsButtons[GRAYEFFECT] = makeButton("Noir&Blanc",makeBounds(0,0,btnsizeX,btnsizeY),
+										   IMAGIMPFORE,IMAGIMPBACK,putGrayEffect);
 
-	startX = getUIStartX();
-	btnsizeX = (float)ihm_w/(float)screenWidth();
-	btnsizeY = 0.05;
-	Imagimp.labels[LBL_CURRENTLAYER] = makeLabel("Calque Courant", makeBounds(startX,0.5,btnsizeX,btnsizeY),
+	Imagimp.components = makeComponentsList(Imagimp.mainButtons);
+	Imagimp_updateButton();
+	for(i=1;i<MAIN_NBBUTTONS;i++)
+	{
+		addComponent(Imagimp.mainButtons+i,&Imagimp.components);
+	}
+}
+
+void Imagimp_setLabels(){
+	float startX = getUIStartX();
+	float btnsizeX = getUIWidth();
+	float btnsizeY = 0.05;
+	int i;
+	Imagimp.labels[LBL_CURRENTLAYER] = makeLabel("Calque Courant", makeBounds(startX,0.4,btnsizeX,btnsizeY),
 												 IMAGIMPFORE,GLUT_BITMAP_HELVETICA_12);
 	Imagimp.labels[LBL_FILE] = makeLabel("Fichier", makeBounds(startX,0.9,btnsizeX,btnsizeY),
 												 IMAGIMPFORE,GLUT_BITMAP_HELVETICA_12);
 	Imagimp.labels[LBL_LAYERLIST] = makeLabel("Rendu", makeBounds(startX,0.65,btnsizeX,btnsizeY),
 												 IMAGIMPFORE,GLUT_BITMAP_HELVETICA_12);
-
-
-
-    Imagimp.components = makeComponentsList(Imagimp.mainButtons);
-    Imagimp_updateButton();
-    for(i=1;i<MAIN_NBBUTTONS;i++)
-    {
-        addComponent(Imagimp.mainButtons+i,&Imagimp.components);
-    }
 	for(i=0;i<MAIN_NBLABEL;i++)
 	{
 		addComponent(Imagimp.labels+i,&Imagimp.components);
 	}
+}
+
+void Imagimp_handleArgs(int argc, char *argv[], unsigned int* w, unsigned int* h){
+	int i;
+	for (i=1;i<argc;i++) {
+		if (strcmp(argv[i],"-h") == 0) {
+			printf("Affichage de l'aide\n");
+			exit(1);
+		}
+		else if (strcmp(argv[i],"-f") == 0) {
+			printf("Chargement fichier :\n");
+			i++;
+			if(i<argc){
+				char input[100];
+				printf("Entrez le fichier a ouvrir:");
+				scanf("%s",input);
+				Imagimp.image_base = readPPM(input,w,h);
+				if(Imagimp.image_base==NULL){
+					fprintf(stderr, "Impossible de lire le fichier %s",argv[i]);
+					exit(1);
+				}
+			}
+			else{
+				Imagimp.image_base = readPPM(argv[i],w,h);
+				i++;
+				if(Imagimp.image_base==NULL){
+					fprintf(stderr, "Impossible de lire le fichier %s",argv[i]);
+					exit(1);
+				}
+			}
+			addNewLayer(&Imagimp.picture,Imagimp.image_base,*w,*h);
+		}
+		else if (strcmp(argv[i],"-n") == 0) {
+			printf("Chargement calque :\n");
+			i++;
+			if(i<argc-1){
+				makeImageBase(600,800);
+				addNewLayer(&Imagimp.picture,Imagimp.image_base,*w,*h);
+			}
+			else
+			{
+				sscanf(argv[i],"%d",w);
+				i++;
+				sscanf(argv[i],"%d",h);
+				i++;
+				makeImageBase(*w,*h);
+				addNewLayer(&Imagimp.picture,Imagimp.image_base,*w,*h);
+			}
+
+		}
+	}
+}
+
+void Imagimp_launch(int argc, char *argv[]) {
+    unsigned int w=800, h=600, ihm_w=200;
+    makeEmptyPicture(&Imagimp.picture, w,h);
+	Imagimp_handleArgs(argc,argv,&w,&h);
+    updateCfLayer(&Imagimp.picture,1);
+    Imagimp.hoveredButton = NULL;
+    Imagimp.pressedButton = NULL;
+    Imagimp.mouseButtonPressed=0;
+    Imagimp.displayMode = 1;
+    Imagimp.dialogMode = 0;
+    Imagimp.dragImage = Imagimp.dragLayer = 0;
+	Imagimp.histogrammeMode = -1;
+    initGLIMAGIMP_IHM(w, h, Imagimp.picture.Cf.rgb, w+ihm_w, h,0);
+    setBackground(makeColor(0.02,0.03,0.05,1),IMAGIMPBACK);
+    fixeFonctionClicSouris(Imagimp_handleMouseClick);
+    fixeFonctionMotionSouris(Imagimp_handleMouseMotion);
+    fixeFonctionClavier(Imagimp_handleKeyboard);
+    fixeFonctionClavierSpecial(Imagimp_handleKeyboardSpecial);
+    fixeFonctionDessin(Imagimp_draw);
+
+	Imagimp_setButtons();
+	Imagimp_setLabels();
+
     initDialog();
     launchApp();
 }
 
-void Imagimp_handleKeyboardTexte(unsigned char ascii, int x, int y) {
-    switch(ascii) {
-    case ESCAPE_KEY: // Touche Escape
-        if(!Dialog.buttons[BTN_NO].invisible)
-            answerNO();
-        else if(!Dialog.buttons[BTN_CANCEL].invisible)
-            answerCANCEL();
-        else if(!Dialog.buttons[BTN_OK].invisible)
-            answerOK();
-        return;
-    case DEL_KEY:
-        removeLastCharacter(&(Dialog.input));
-        return;
-    case BACKSPACE_KEY:
-        removeLastCharacter(&(Dialog.input));
-        return;
-    case ENTER_KEY:
-        if(!Dialog.buttons[BTN_YES].invisible)
-            answerYES();
-        else if(!Dialog.buttons[BTN_OK].invisible)
-            answerOK();
-        else
-            addCharacter(&Dialog.input,'\n');
-        return;
-    default :
-        break;
-    }
-    if(Dialog.prompt){
-        addCharacter(&(Dialog.input),ascii);
-    }
-}
 void Imagimp_handleKeyboard(unsigned char ascii, int x, int y, char CTRL, char ALT) {
-    printf("%c", ascii);
-    printf(" : %u\n",ascii);
     if(Imagimp.dialogMode){
-        Imagimp_handleKeyboardTexte(ascii, x, y);
+		handleKeyboardTexte(ascii, x, y);
         return;
     }
     char saisie[100] = {'\0'};
     int modifier = glutGetModifiers();
     switch(ascii) {
-    case 'l': /* (LUT_1) Ajouter une LUT au calque actif */
-        /* ADDLUM, DIMLUM, ADDCON, DIMCON, INVERT, SEPIA */
+	case 'l': openLUTAddingDialog();
         break;
     case 'L': /* (LUT_3) Supprimer la dernière LUT au calque actif */ break;
-    case 'a': /* (LUT_2) Appliquer une LUT au calque actif */ break;
-    case 'v': /* (IHM_1) Vue source-calque ou image-finale */ break;
-    case 'q': /* (IHM_4) Quitter, en libérant la mémoire. */ break;
+	case 'a': /* (LUT_2) Appliquer une LUT au calque actif */ break;
+	case 'v': Imagimp_switchDisplay(); break;
+	case 'q': Imagimp_quit(); break;
     case 'h': /* Imprimer l'historique dans le terminal */
         /* L'historique conserve :
          * IM_1, CAL_1, CAL_3, CAL_4, CAL_5, LUT_1, LUT_3
@@ -536,10 +585,9 @@ void Imagimp_handleKeyboard(unsigned char ascii, int x, int y, char CTRL, char A
         /* Calque multiplicatif blanc d'opacité 0, inséré à la fin de la
          * liste de calques. */
         break;
-    case 'x': /* (CAL_5) Supprimer le calque actif */
-        /* On ne peut supprimer le dernier calque. */
+	case 'x': Imagimp_removeCurrentLayer();
         break;
-    case 'm': /* (CAL_4) Changer la fonction de mélange du calque */ break;
+	case 'm': openBlendDialog(); break;
     case 't': // Exemple de saisie sur le terminal
         printf("Debraillement sur le terminal\n");
         printf("Merci de rentrer une chaine de caract�re :");
@@ -607,7 +655,7 @@ void Imagimp_handleKeyboard(unsigned char ascii, int x, int y, char CTRL, char A
         Imagimp_quit();
         break;
     default :
-        printf("Touche non fonctionnelle\n");
+		break;
     }
 }
 
@@ -636,7 +684,7 @@ void Imagimp_handleKeyboardSpecial(int touche, int x, int y) {
             }
         }
         else
-            Imagimp_setOpacityToCurrentLayer(Imagimp.picture.current->element->opacity-0.1);
+			translateCurrentLayer(&Imagimp.picture,-5,0);
         break;
     case GLUT_KEY_RIGHT:
         if(Imagimp.dialogMode){
@@ -647,10 +695,10 @@ void Imagimp_handleKeyboardSpecial(int touche, int x, int y) {
             }
         }
         else
-            Imagimp_setOpacityToCurrentLayer(Imagimp.picture.current->element->opacity+0.1);
+			translateCurrentLayer(&Imagimp.picture,5,0);
         break;
-    case GLUT_KEY_UP: /* (CAL_2) Calque suivant */ break;
-    case GLUT_KEY_DOWN: /* (CAL_2) Calque précédent */ break;
+	case GLUT_KEY_UP: translateCurrentLayer(&Imagimp.picture,0,5); break;
+	case GLUT_KEY_DOWN: translateCurrentLayer(&Imagimp.picture,0,-5); break;
     case GLUT_KEY_PAGE_UP: break;
     case GLUT_KEY_PAGE_DOWN: break;
     case GLUT_KEY_HOME: break;
@@ -802,102 +850,6 @@ void Imagimp_handleMouseMotion(float xGL, float yGL, float deltaX, float deltaY,
     if(redisplay) glutPostRedisplay();
 }
 
-void Dialog_draw(){
-	glColor4f(DIALOGBACK.r,DIALOGBACK.g,DIALOGBACK.b,0.9);
-    drawCarre(Dialog.bounds.x,Dialog.bounds.y,Dialog.bounds.x2,Dialog.bounds.y2);
-    float x, y;
-    glColor4f(DIALOGFORE.r,DIALOGFORE.g,DIALOGFORE.b,DIALOGFORE.a);
-    if(Dialog.text!=NULL){
-        writeString(Dialog.xText,Dialog.yText,Dialog.text);
-    }
-	drawAllComponents(Dialog.components);
-    if(Dialog.prompt){
-		glColor4f(WHITE.r,WHITE.g,WHITE.b,1);
-        drawCarre(Dialog.promptBounds.x,Dialog.promptBounds.y,Dialog.promptBounds.x2,Dialog.promptBounds.y2);
-		glColor4f(BLACK.r,BLACK.g,BLACK.b,1);
-		drawCarreVide(Dialog.promptBounds.x,Dialog.promptBounds.y,Dialog.promptBounds.x2,Dialog.promptBounds.y2);
-        float height = 2.3*(float)glutBitmapWidth(GLUT_BITMAP_8_BY_13,'_') * 8./(13.*(float)screenHeight());
-        StringChar* current;
-		x = Dialog.promptBounds.x*1.15;
-        y = Dialog.promptBounds.y + Dialog.promptBounds.height -height;
-        glRasterPos2f(x, y);
-        for(current = Dialog.input.first;current!=NULL;current = current->next){
-            if(current->c == '\n')
-            {
-                y -= height;
-                glRasterPos2f(x, y);
-            }
-            else
-                glutBitmapCharacter(GLUT_BITMAP_8_BY_13, current->c);
-        }
-    }
-}
-
-void activeDialog(const char *text, int flag, void (*closeHandle)(DIALOGBTNS)){
-    if(Dialog.text != NULL) free(Dialog.text);
-    if(Dialog.input.size) freeString(Dialog.input);
-    Dialog.text = NULL;
-    Imagimp.dialogMode = 1;
-    if(text[0]){
-        Dialog.text = malloc(sizeof(char)*strlen(text)+1);
-        strcpy(Dialog.text,text);
-    }
-    Dialog.buttons[BTN_OK].invisible = !(flag & FLAGS_OK);
-    Dialog.buttons[BTN_YES].invisible = !(flag & FLAGS_YES);
-    Dialog.buttons[BTN_NO].invisible = !(flag & FLAGS_NO);
-    Dialog.buttons[BTN_CANCEL].invisible = !(flag & FLAGS_CANCEL);
-    Dialog.prompt = flag & FLAGS_PROMPT;
-    Dialog.choice = flag & FLAGS_RADIOBUTTON;
-    Dialog.slider.invisible = !(flag & FLAGS_SLIDER);
-    Dialog.closeHandle = closeHandle;
-
-    float x = Dialog.xBtn;
-    float y = Dialog.yBtn;
-    int i;
-    for(i=0;i<DIALOG_NBBUTTONS;i++){
-        if(!Dialog.buttons[i].invisible){
-            Dialog.buttons[i].bounds.x = x;
-            Dialog.buttons[i].bounds.x2 = x + Dialog.buttons[i].bounds.width;
-            Dialog.buttons[i].bounds.y = y;
-            Dialog.buttons[i].bounds.y2 = y + Dialog.buttons[i].bounds.height;
-            x -= 0.10;
-        }
-        else{
-            Dialog.buttons[i].bounds.x = -1;
-            Dialog.buttons[i].bounds.x2 =-1;
-            Dialog.buttons[i].bounds.y = -1;
-            Dialog.buttons[i].bounds.y2 = -1;
-        }
-    }
-    glutPostRedisplay();
-}
-
-void desactiveDialog(){
-    Imagimp.dialogMode = 0;
-    Dialog.prompt = 0;
-    Dialog.choice = 0;
-    Dialog.radioButtons = NULL;
-	for(;Dialog.nbRadioButtons>0;Dialog.nbRadioButtons--)
-		removeFirstComponent(&Dialog.components);
-    Dialog.slider.invisible = 1;
-	Dialog.slider.clickHandle = 0;
-    glutPostRedisplay();
-}
-
-void addRadioButtonInDialog(Component *radioButton){
-    ComponentsList* otherButton = Dialog.radioButtons;
-    while(otherButton!=NULL){
-        addButtonToRadioButtonList(otherButton->componenent,radioButton);
-        otherButton = otherButton->next;
-    }
-    addComponent(radioButton,&Dialog.radioButtons);
-    addComponent(radioButton,&Dialog.components);
-    radioButton->bounds = makeBounds(Dialog.bounds.x +0.03+ 0.085*(Dialog.nbRadioButtons%5),
-                                     Dialog.promptBounds.y2 - (Dialog.nbRadioButtons/5)*0.08,
-                                     radioButton->bounds.width,radioButton->bounds.height);
-    Dialog.nbRadioButtons++;
-}
-
 void Imagimp_draw() {
 	glColor4f(0.75,0.7,0.74,0.9);
 	Bounds b = currentLayerBounds();
@@ -908,66 +860,93 @@ void Imagimp_draw() {
 	drawCarreVide(b.x,b.y-0.002,b.x2,b.y2+0.002);
 	glLineWidth(1);
 	drawAllComponents(Imagimp.components);
+	b = makeBounds(0,0,0.2,0.17);
+	if(Imagimp.histogrammeMode>=0){
+		if(Imagimp.displayMode){
+			if(!Imagimp.picture.Cf.histogrammeUpdated)
+				updateHistogramme(&Imagimp.picture.Cf);
+			glTranslatef(0,0.005,0);
+			glColor4f(0.1,0.1,0.12,0.7);
+			drawCarre(b.x,b.y,b.x2,b.y2);
+			switch (Imagimp.histogrammeMode) {
+			case RED_H:
+				glColor4f(1,0,0,0.3);
+				drawHistorgramme(Imagimp.picture.Cf.histogrammes+RED_H,&b);
+				break;
+			case BLUE_H:
+				glColor4f(0,1,0,0.3);
+				drawHistorgramme(Imagimp.picture.Cf.histogrammes+BLUE_H,&b);
+				break;
+			case GREEN_H:
+				glColor4f(0,0,1,0.3);
+				drawHistorgramme(Imagimp.picture.Cf.histogrammes+GREEN_H,&b);
+				break;
+			case GRAYSCALE_H:
+				glColor4f(0.8,0.8,0.8,0.3);
+				drawHistorgramme(Imagimp.picture.Cf.histogrammes+GRAYSCALE_H,&b);
+				break;
+			default:
+				glColor4f(1,0,0,0.3);
+				drawHistorgramme(Imagimp.picture.Cf.histogrammes+RED_H,&b);
+				glColor4f(0,1,0,0.3);
+				drawHistorgramme(Imagimp.picture.Cf.histogrammes+BLUE_H,&b);
+				glColor4f(0,0,1,0.3);
+				drawHistorgramme(Imagimp.picture.Cf.histogrammes+GREEN_H,&b);
+				glColor4f(0.8,0.8,0.8,0.3);
+				drawHistorgramme(Imagimp.picture.Cf.histogrammes+GRAYSCALE_H,&b);
+				break;
+			}
+		}
+	}
     if(Imagimp.dialogMode){
         Dialog_draw();
     }
 }
 
-String makeString(){
-    String s;
-    s.size = 0;
-    s.first = NULL;
-    s.last = s.first;
-    return s;
+void Imagimp_updateButton(){
+	Imagimp.mainButtons[BTN_UPLAYER].inactiv = Imagimp.picture.current->next == NULL;
+	Imagimp.mainButtons[BTN_DELETELAYER].inactiv = Imagimp.picture.current->previous == NULL;
+	Imagimp.mainButtons[BTN_DOWNLAYER].inactiv = Imagimp.mainButtons[BTN_DELETELAYER].inactiv ?
+													1:
+													Imagimp.picture.current->previous->previous == NULL;
 }
 
-void addCharacter(String* s, char c){
-    StringChar* newC = malloc(sizeof(StringChar));
-    newC->c = c;
-    newC->next = NULL;
-    newC->previous = s->last;
-    if(s->last!=NULL)
-        s->last->next = newC;
-    else
-        s->first = newC;
-    s->last = newC;
-    s->size++;
-    glutPostRedisplay();
+
+void Imagimp_setOpacityToCurrentLayer(float opacity){
+	Imagimp.picture.current->element->opacity = fmaxf(0,fminf(1,opacity));
+	Imagimp_refresh(1);
 }
 
-void removeLastCharacter(String *s){
-    if(s->last!=NULL){
-        StringChar* tmp = s->last->previous;
-        free(s->last);
-        s->last = tmp;
-        if(s->last!=NULL)
-            s->last->next = NULL;
-        else
-            s->first = NULL;
-        s->size--;
-    }
-    glutPostRedisplay();
+void Imagimp_refresh(int pixelsize){
+	if(Imagimp.displayMode){
+		updateCfLayer(&Imagimp.picture,pixelsize);
+		actualiseImage(Imagimp.picture.Cf.rgb, Imagimp.picture.Cf.width,Imagimp.picture.Cf.height);
+	}
+	else{
+		actualiseImage(Imagimp.picture.current->element->rgb,
+					   Imagimp.picture.current->element->width,Imagimp.picture.current->element->height);
+	}
 }
 
-char* convertString(String s){
-    char* retour = malloc(sizeof(char)*s.size+1);
-    retour[s.size] = 0;
-    int i;
-    StringChar* current;
-    for(i=0,current = s.first;i<s.size;i++,current = current->next)
-        retour[i] = current->c;
-    return retour;
+void Imagimp_addEmptyLayer(){
+	addNewEmptyLayer(&Imagimp.picture);
+	Imagimp_refresh(1);
 }
 
-void freeString(String s){
-    s.size = 0;
-    int i;
-    StringChar* current;
-    for(i=0,current = s.first;i<s.size;i++)
-    {
-        StringChar* temp = current->next;
-        free(current);
-        current = temp;
-    }
-    s.first = s.last = NULL;
+void Imagimp_removeCurrentLayer(){
+	if(Imagimp.picture.current->previous !=NULL)
+	{
+		removeCurrentLayer(&Imagimp.picture);
+		if(Imagimp.picture.current->previous==NULL)
+			setComponentInactiv(Imagimp.mainButtons + BTN_DELETELAYER,1);
+		Imagimp_refresh(1);
+	}
+	else
+		activeDialog("Impossible de supprimer le calque d'arrière plan", FLAGS_OK,NULL);
 }
+
+void Imagimp_quit(){
+	printf("Fin du programme\n");
+	exit(0);
+}
+

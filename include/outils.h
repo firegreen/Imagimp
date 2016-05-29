@@ -31,6 +31,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <GL/glut.h>
+#define max(a,b) ((a)>(b))?(a):(b)
+#define min(a,b) ((a)<(b))?(a):(b)
 
 typedef struct {
     float r,g,b,a;
@@ -38,6 +40,10 @@ typedef struct {
 
 Color makeColor(float r, float g, float b, float a);
 Color makeInversedColor(Color c);
+
+extern const Color BLACK;
+extern const Color TRANSLUCIDE;
+extern const Color WHITE;
 
 typedef struct {
     float x,y,width,height;

@@ -13,3 +13,11 @@ src/imagimp/main.c
 src/imagimp/PPM.c
 Makefile
 include/liste.h
+include/picture.h
+src/imagimp/picture.c
+include/blend.h
+src/imagimp/blend.c
+include/imagimp_string.h
+src/imagimp/imagimp_string.c
+include/imagimp_dialog.h
+src/imagimp/imagimp_dialog.c

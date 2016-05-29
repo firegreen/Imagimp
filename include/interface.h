@@ -143,6 +143,7 @@ extern void actualiseImage(unsigned char* newImage, unsigned int width, unsigned
 extern void fixeFonctionMotionSouris(void (*fct)(float x, float y, float deltaX, float deltaY, int button));
 extern void setBackground(Color backUI, Color backImage);
 extern float getUIStartX();
+extern float getUIWidth();
 extern void translateImage(float x, float y);
 extern Bounds imageBounds();
 
@@ -183,7 +184,7 @@ extern Component* findComponentInList(float x, float y, ComponentsList* list);
 extern Component* findComponentInArray(float x, float y, Component *components, int nbComponents);
 extern void drawAllComponents(const ComponentsList *list);
 
-typedef enum { LABEL, BUTTON, RADIOBUTTON, SLIDER } ComponentType;
+typedef enum { LABEL, BUTTON, RADIOBUTTON, CHECKBUTTON, DELETABLEBUTTON, SLIDER } ComponentType;
 
 typedef struct Component {
     ComponentType type;
@@ -198,7 +199,9 @@ typedef struct Component {
     union {
 		struct { char* text; void* font;} Label;
 		struct { char* text; } Button;
-		struct { char* text; ComponentsList* othersRadioButton; char isSelected;} RadioButton;
+		struct { char* text; char needToBeDelete; Bounds closeBounds;} DeletableButton;
+		struct { char* text; char isSelected; ComponentsList* othersRadioButton; } RadioButton;
+		struct { char* text; char isSelected;} CheckButton;
 		struct { Bounds cursorBounds; float value; float min; float max;} Slider;
     } extends;
 } Component;
@@ -218,12 +221,19 @@ extern void setLabelText(Component *c, char* text);
 extern Component makeButton(char* text, Bounds bounds,Color fore, Color back,
                   void (*clickHandle)(const void*));
 extern void setButtonText(Component *c, char* text);
-extern void selectRadioButton(Component *b);
+
+extern Component makeDeletableButton(char* text, Bounds bounds,Color fore, Color back,
+				  void (*clickHandle)(const void*));
+void updateDeletableButtonPos(Component *c);
 
 extern Component makeRadioButton(char* text, Bounds bounds,Color fore, Color back,
                                 void (*clickHandle)(const void*));
 extern void addButtonToRadioButtonList(Component *radioButton1, Component *radioButton2);
+extern void selectRadioButton(Component *b);
 
+extern Component makeCheckButton(char* text, Bounds bounds,Color fore, Color back,
+							void (*clickHandle)(const void*));
+extern void selectCheckButton(Component *b);
 
 extern Component makeSlider(Bounds bounds, Color fore, Color back, void (*setHandle)(const void*));
 extern void setComponentValue(Component *s, float value);
@@ -232,5 +242,7 @@ extern void setSliderValueFromPos(Component *s, float x);
 extern void setSliderValue(Component *s, float value);
 extern void setSliderMax(Component *s, float max);
 extern void setSliderMin(Component *s, float min);
+
+extern void freeComponent(Component *c);
 
 #endif

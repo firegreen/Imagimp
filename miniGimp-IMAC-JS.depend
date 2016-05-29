@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1463699288 source:c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\src\glimagimp\interface.c
+1464562436 source:c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\src\glimagimp\interface.c
 	"outils.h"
 	"interface.h"
 	<stdlib.h>
@@ -7,12 +7,12 @@
 	<windows.h>
 	<unistd.h>
 
-1461333613 c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\include\outils.h
+1464559293 c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\include\outils.h
 	<stdio.h>
 	<stdlib.h>
 	<GL/glut.h>
 
-1463698136 c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\include\interface.h
+1464561147 c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\include\interface.h
 	<stdio.h>
 	<GL/glut.h>
 	"outils.h"
@@ -21,7 +21,7 @@
 	<GL/gl.h>
 	<GL/glext.h>
 
-1461344206 source:c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\src\glimagimp\outils.c
+1464560954 source:c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\src\glimagimp\outils.c
 	"interface.h"
 	"outils.h"
 	<stdio.h>
@@ -37,7 +37,7 @@
 	"dliste.h"
 	"pile.h"
 
-1461167379 c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\include\dliste.h
+1463886440 c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\include\dliste.h
 	<stdlib.h>
 	<stdbool.h>
 
@@ -45,19 +45,22 @@
 	<stdlib.h>
 	<assert.h>
 
-1463760663 source:c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\src\imagimp\imagimp.c
+1464562881 source:c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\src\imagimp\imagimp.c
 	<string.h>
 	<stdlib.h>
 	<stdio.h>
 	<GL/glut.h>
 	"interface.h"
-	"Imagimp.h"
+	"picture.h"
+	"imagimp.h"
 	"PPM.h"
 	"outils.h"
+	"imagimp_dialog.h"
 
-1463759083 c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\include\imagimp.h
+1464561653 c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\include\imagimp.h
 	"interface.h"
-	"layer.h"
+	"picture.h"
+	"imagimp_dialog.h"
 
 1461503722 source:c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\src\imagimp\main.c
 	"Imagimp.h"
@@ -72,14 +75,48 @@
 1461340998 c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\include\ppm.h
 	<stdbool.h>
 
-1463695882 source:c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\src\imagimp\layer.c
+1464558721 source:c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\src\imagimp\layer.c
 	<string.h>
 	<math.h>
 	"layer.h"
 	"outils.h"
 
-1463750521 c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\include\layer.h
+1464558749 c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\include\layer.h
 	"dliste.h"
+	"liste.h"
 	"outils.h"
+	"blend.h"
 	"pile.h"
+
+1464563171 c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\include\liste.h
+	<stdlib.h>
+	<stdbool.h>
+
+1464558786 source:c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\src\imagimp\blend.c
+	"blend.h"
+	"outils.h"
+	"layer.h"
+
+1464558758 c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\include\blend.h
+	"liste.h"
+
+1464558627 c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\include\picture.h
+	"layer.h"
+
+1464561639 c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\include\imagimp_dialog.h
+	"interface.h"
+	"imagimp_string.h"
+
+1464559120 c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\include\imagimp_string.h
+
+1464562307 source:c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\src\imagimp\imagimp_dialog.c
+	"imagimp_dialog.h"
+	"Imagimp.h"
+
+1464561041 source:c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\src\imagimp\imagimp_string.c
+	"imagimp_string.h"
+	<stdlib.h>
+
+1464558627 source:c:\users\steev\plus\imac\prog\semestre 2\minigimp-imac-js\src\imagimp\picture.c
+	"picture.h"
 
