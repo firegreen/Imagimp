@@ -42,8 +42,20 @@ unsigned char subBlend(unsigned char pixelBelow, float opacityBelow,
 
 unsigned char divBlend(unsigned char pixelBelow, float opacityBelow,
 					   unsigned char pixelAbove, float opacityAbove,void* parameters){
-	if(pixelBelow<=pixelAbove*opacityAbove) return 0;
-	else return (pixelBelow-pixelAbove*opacityAbove)/(1.-opacityAbove);
+	if(pixelBelow*(1.-opacityAbove)<= pixelAbove*opacityAbove) return 0;
+	return pixelBelow*(1.-opacityAbove) - pixelAbove*opacityAbove;
+}
+
+unsigned char darkBlend(unsigned char pixelBelow, float opacityBelow,
+			  unsigned char pixelAbove, float opacityAbove,
+			  void* parameters){
+	return min(pixelBelow,pixelAbove*opacityAbove);
+}
+
+unsigned char lightBlend(unsigned char pixelBelow, float opacityBelow,
+			  unsigned char pixelAbove, float opacityAbove,
+			  void* parameters){
+	return max(pixelBelow,pixelAbove*opacityAbove);
 }
 
 BlendPixelFunc functionFromBlendMode(BlendMode bm, int inverseAction){
@@ -59,6 +71,10 @@ BlendPixelFunc functionFromBlendMode(BlendMode bm, int inverseAction){
 			return multBlend;
 		case BLEND_MOY:
 			return inversedMoyBlend;
+		case BLEND_DARK:
+			return lightBlend;
+		case BLEND_LIGHT:
+			return darkBlend;
 		default:
 			break;
 		}
@@ -75,6 +91,10 @@ BlendPixelFunc functionFromBlendMode(BlendMode bm, int inverseAction){
 			return divBlend;
 		case BLEND_MOY:
 			return moyBlend;
+		case BLEND_DARK:
+			return darkBlend;
+		case BLEND_LIGHT:
+			return lightBlend;
 		default:
 			break;
 		}

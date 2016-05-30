@@ -51,4 +51,7 @@ void translateCurrentLayer(Picture* p, int tx, int ty);
 // pixelsize : entier plus grand ou egale a 1, il s'agit du nombre de pixel qui prendront la même couleur
 void makeCfPicture(Layer* lf, LayersList* layers, int pixelsize);
 
+//libere les ressources de l'image
+void freePicture(Picture *p);
+
 #endif

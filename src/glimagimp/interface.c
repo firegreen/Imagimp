@@ -1042,3 +1042,24 @@ void freeComponent(Component *c){
 	}
 	free(c);
 }
+
+void freeAllComponents(ComponentsList *l){
+	if(l!=NULL){
+		ComponentsList* current = l;
+		while(current->next!=NULL){
+			ComponentsList* next = current->next;
+			switch(current->componenent->type){
+			case BUTTON:
+			case CHECKBUTTON:
+			case DELETABLEBUTTON:
+			case RADIOBUTTON:
+			case LABEL:
+				free(current->componenent->extends.Label.text);
+			default:
+				break;
+			}
+			free(current);
+			current = next;
+		}
+	}
+}

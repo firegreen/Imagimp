@@ -244,5 +244,6 @@ extern void setSliderMax(Component *s, float max);
 extern void setSliderMin(Component *s, float min);
 
 extern void freeComponent(Component *c);
+extern void freeAllComponents(ComponentsList *l);
 
 #endif

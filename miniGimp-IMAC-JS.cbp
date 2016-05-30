@@ -28,10 +28,15 @@
 		</Compiler>
 		<Unit filename="include/Imagimp.h" />
 		<Unit filename="include/PPM.h" />
+		<Unit filename="include/blend.h" />
 		<Unit filename="include/dliste.h" />
+		<Unit filename="include/imagimp_dialog.h" />
+		<Unit filename="include/imagimp_string.h" />
 		<Unit filename="include/interface.h" />
 		<Unit filename="include/layer.h" />
+		<Unit filename="include/liste.h" />
 		<Unit filename="include/outils.h" />
+		<Unit filename="include/picture.h" />
 		<Unit filename="include/pile.h" />
 		<Unit filename="src/glimagimp/interface.c">
 			<Option compilerVar="CC" />
@@ -45,10 +50,22 @@
 		<Unit filename="src/imagimp/PPM.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="src/imagimp/blend.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/imagimp/imagimp_dialog.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/imagimp/imagimp_string.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="src/imagimp/layer.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="src/imagimp/main.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/imagimp/picture.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Extensions>

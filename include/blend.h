@@ -13,7 +13,7 @@ typedef struct Layer Layer;
 typedef unsigned char (*BlendPixelFunc)(unsigned char, float, unsigned char, float, void* parameters);
 
 // L'enumeration BlendMode liste des drapeaux permettant de determiner la fonction de melange
-typedef enum BLENDMODE { BLEND_ADD=0, BLEND_MOY, BLEND_MULT, BLEND_SUB, BLEND_DIV, NBBLEND } BlendMode;
+typedef enum BLENDMODE { BLEND_ADD=0, BLEND_MOY, BLEND_MULT, BLEND_SUB, BLEND_DIV, BLEND_DARK, BLEND_LIGHT, NBBLEND } BlendMode;
 // drapeau definissant le melange par defauts
 #define DEFAULTBLEND BLEND_MULT
 
@@ -40,6 +40,14 @@ unsigned char subBlend(unsigned char pixelBelow, float opacityBelow,
 			  void* parameters);
 // operation division de deux pixels
 unsigned char divBlend(unsigned char pixelBelow, float opacityBelow,
+			  unsigned char pixelAbove, float opacityAbove,
+			  void* parameters);
+// operation sombre de deux pixels
+unsigned char darkBlend(unsigned char pixelBelow, float opacityBelow,
+			  unsigned char pixelAbove, float opacityAbove,
+			  void* parameters);
+// operation lumineux de deux pixels
+unsigned char lightBlend(unsigned char pixelBelow, float opacityBelow,
 			  unsigned char pixelAbove, float opacityAbove,
 			  void* parameters);
 

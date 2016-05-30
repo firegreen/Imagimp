@@ -29,7 +29,6 @@ typedef struct Layer {
 	Histogramme histogrammes[NB_H_TYPES];
 	char histogrammeUpdated;
 } Layer;
-typedef Layer Layer;
 
 // cree un calque a partir d'un tableau de pixel rgb de largeur width et hauteur height
 void makeLayer(Layer* l, const unsigned char* rgb, unsigned int width, unsigned int height,int x, int y);
@@ -56,7 +55,8 @@ void drawHistorgramme(const Histogramme* histogramme, const Bounds *b);
 void updateHistogramme(Layer* l);
 
 DECLARER_DLISTE(LayersList, Layer)
-
+// libere tout les calques
+void freeAllLayers(LayersList **l);
 #include "pile.h"
 
 typedef struct {

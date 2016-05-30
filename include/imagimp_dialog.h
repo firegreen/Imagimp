@@ -41,5 +41,4 @@ void freeDialogSetButtons();
 void Dialog_draw();
 void handleKeyboardTexte(unsigned char ascii, int x, int y);
 
-
 #endif

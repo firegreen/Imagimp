@@ -445,6 +445,10 @@ void Imagimp_setButtons(){
 											  IMAGIMPFORE,IMAGIMPBACK,handleBlendModeDialogButton);
 	Imagimp.blendButtons[BLEND_SUB] = makeRadioButton("Difference",makeBounds(0,0,btnsizeX,btnsizeY),
 												  IMAGIMPFORE,IMAGIMPBACK,handleBlendModeDialogButton);
+	Imagimp.blendButtons[BLEND_DARK] = makeRadioButton("Sombre",makeBounds(0,0,btnsizeX,btnsizeY),
+												  IMAGIMPFORE,IMAGIMPBACK,handleBlendModeDialogButton);
+	Imagimp.blendButtons[BLEND_LIGHT] = makeRadioButton("Lumineux",makeBounds(0,0,btnsizeX,btnsizeY),
+												  IMAGIMPFORE,IMAGIMPBACK,handleBlendModeDialogButton);
 
 	Imagimp.effectsButtons[CONTRAST] = makeButton("Contraste",makeBounds(0,0,btnsizeX,btnsizeY),
 										   IMAGIMPFORE,IMAGIMPBACK,openContrastDialog);
@@ -904,7 +908,8 @@ void Imagimp_draw() {
 }
 
 void Imagimp_updateButton(){
-	Imagimp.mainButtons[BTN_UPLAYER].inactiv = Imagimp.picture.current->next == NULL;
+	Imagimp.mainButtons[BTN_UPLAYER].inactiv =	Imagimp.picture.current->next == NULL ||
+												Imagimp.picture.current->previous == NULL;
 	Imagimp.mainButtons[BTN_DELETELAYER].inactiv = Imagimp.picture.current->previous == NULL;
 	Imagimp.mainButtons[BTN_DOWNLAYER].inactiv = Imagimp.mainButtons[BTN_DELETELAYER].inactiv ?
 													1:
@@ -946,6 +951,9 @@ void Imagimp_removeCurrentLayer(){
 }
 
 void Imagimp_quit(){
+	desactiveDialog();
+	freePicture(&Imagimp.picture);
+	freeAllComponents(Imagimp.components);
 	printf("Fin du programme\n");
 	exit(0);
 }

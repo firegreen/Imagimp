@@ -213,6 +213,20 @@ void freeLayer(Layer **l){
 	*l = NULL;
 }
 
+void freeAllLayers(LayersList **l){
+	if(*l!=NULL){
+		LayersList* current = *l;
+		while(current->next!=NULL){
+			LayersList* next = current->next;
+			freeLayer(&current->element);
+			free(current);
+			current = next;
+		}
+		free(*l);
+		*l = NULL;
+	}
+}
+
 void translateCurrentLayer(Picture *p, int tx, int ty){
 	if(p->current->previous!=NULL){
 		p->current->element->x += tx;
@@ -223,4 +237,9 @@ void translateCurrentLayer(Picture *p, int tx, int ty){
 
 int pictureIsEmpty(const Picture* p){
 	return p->current->previous==NULL;
+}
+
+void freePicture(Picture* p){
+	freeAllLayers(&p->layers.next);
+	free(p->layers.element->rgb);
 }
