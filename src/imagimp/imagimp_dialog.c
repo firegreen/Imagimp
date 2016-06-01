@@ -1,5 +1,6 @@
 #include "imagimp_dialog.h"
-#include "Imagimp.h"
+#include "imagimp.h"
+#include <string.h>
 
 const Color DIALOGBACK = {0.05,0.17,0.15,1};
 const Color DIALOGFORE = {0.75,0.9,0.65,1};

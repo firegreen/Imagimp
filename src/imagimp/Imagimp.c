@@ -578,6 +578,37 @@ void Imagimp_handleKeyboard(unsigned char ascii, int x, int y, char CTRL, char A
 	case 'a': /* (LUT_2) Appliquer une LUT au calque actif */ break;
 	case 'v': Imagimp_switchDisplay(); break;
 	case 'q': Imagimp_quit(); break;
+    case 'b':
+        if(Imagimp.picture.currentID == 0){
+            changeCurrentTo(&Imagimp.picture,Imagimp.picture.nbLayers-1);
+            Imagimp_updateButton();
+
+        }
+        else{
+            changeCurrentToBelowLayer(&Imagimp.picture);
+            Imagimp_updateButton();
+        }
+        if(Imagimp.picture.current->previous==NULL)
+            setComponentInactiv(Imagimp.mainButtons + BTN_DELETELAYER,1);
+        else
+            setComponentInactiv(Imagimp.mainButtons + BTN_DELETELAYER,0);
+        Imagimp_refresh(1);
+        break;
+    case 'n':
+        if(Imagimp.picture.currentID >= Imagimp.picture.nbLayers-1){
+            changeCurrentTo(&Imagimp.picture,0);
+            Imagimp_updateButton();
+        }
+        else{
+            changeCurrentToAboveLayer(&Imagimp.picture);
+            Imagimp_updateButton();
+        }
+        if(Imagimp.picture.current->previous==NULL)
+            setComponentInactiv(Imagimp.mainButtons + BTN_DELETELAYER,1);
+        else
+            setComponentInactiv(Imagimp.mainButtons + BTN_DELETELAYER,0);
+        Imagimp_refresh(1);
+        break;
     case 'h': /* Imprimer l'historique dans le terminal */
         /* L'historique conserve :
          * IM_1, CAL_1, CAL_3, CAL_4, CAL_5, LUT_1, LUT_3
@@ -611,16 +642,26 @@ void Imagimp_handleKeyboard(unsigned char ascii, int x, int y, char CTRL, char A
         setFullsreen(!isFullscreen());
         break;
     case '+':
+    #ifdef WIN32
         if(CTRL){
             zoomPlus();
             glutPostRedisplay();
         }
+    #else
+        zoomPlus();
+        glutPostRedisplay();
+    #endif
         break;
     case '-':
+    #ifdef WIN32
         if(CTRL){
             zoomMoins();
             glutPostRedisplay();
         }
+    #else
+        zoomMoins();
+        glutPostRedisplay();
+    #endif
         break;
     case '\t':
         if(glutGetModifiers()==GLUT_ACTIVE_SHIFT){
@@ -955,6 +996,6 @@ void Imagimp_quit(){
 	freePicture(&Imagimp.picture);
 	freeAllComponents(Imagimp.components);
 	printf("Fin du programme\n");
-	exit(0);
+    exit(0);
 }
 
